@@ -4,6 +4,7 @@ import { getProviderStatus } from "./config/env.js";
 import { errorHandler, notFound } from "./middleware/validate.js";
 import albumsRoutes from "./routes/albums.routes.js";
 import artistsRoutes from "./routes/artists.routes.js";
+import audioRoutes from "./routes/audio.routes.js";
 import discoveryRoutes from "./routes/discovery.routes.js";
 import providersRoutes from "./routes/providers.routes.js";
 import searchRoutes from "./routes/search.routes.js";
@@ -28,6 +29,7 @@ export function createApp({ corsOrigin } = {}) {
   });
 
   app.use("/api/search", searchRoutes);
+  app.use("/api/audio", audioRoutes);
   app.use("/api/tracks", tracksRoutes);
   app.use("/api/artists", artistsRoutes);
   app.use("/api/albums", albumsRoutes);

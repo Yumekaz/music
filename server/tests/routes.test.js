@@ -40,4 +40,11 @@ describe("api routes", () => {
     expect(lyrics.body.synced.length).toBeGreaterThan(0);
     expect(availability.body.links.youtube).toContain("youtube.com");
   });
+
+  it("serves same-origin fallback preview audio", async () => {
+    const response = await request(app).get("/api/audio/preview/track-kesariya").expect(200);
+
+    expect(response.headers["content-type"]).toContain("audio/wav");
+    expect(Number(response.headers["content-length"])).toBeGreaterThan(1000);
+  });
 });

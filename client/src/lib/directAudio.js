@@ -6,7 +6,6 @@ export function getDirectAudioElement() {
   if (!directAudioElement) {
     directAudioElement = new Audio();
     directAudioElement.preload = "metadata";
-    directAudioElement.crossOrigin = "anonymous";
   }
 
   return directAudioElement;

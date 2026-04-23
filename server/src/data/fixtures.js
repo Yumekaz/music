@@ -1,4 +1,4 @@
-const PREVIEW_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+const previewUrl = (id) => `/api/audio/preview/${id}`;
 
 export const artists = [
   {
@@ -79,7 +79,7 @@ export const tracks = [
   {
     id: "track-blinding-lights",
     videoId: "4NRXx6U8ABQ",
-    previewUrl: PREVIEW_URL,
+    previewUrl: previewUrl("track-blinding-lights"),
     jamendoId: "",
     title: "Blinding Lights",
     artistName: "The Weeknd",
@@ -104,7 +104,7 @@ export const tracks = [
   {
     id: "track-kesariya",
     videoId: "BddP6PYo2gs",
-    previewUrl: PREVIEW_URL,
+    previewUrl: previewUrl("track-kesariya"),
     jamendoId: "",
     title: "Kesariya",
     artistName: "Arijit Singh",
@@ -129,7 +129,7 @@ export const tracks = [
   {
     id: "track-pasoori",
     videoId: "5Eqb_-j3FDA",
-    previewUrl: PREVIEW_URL,
+    previewUrl: previewUrl("track-pasoori"),
     jamendoId: "",
     title: "Pasoori",
     artistName: "Ali Sethi",
