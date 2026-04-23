@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: music-app-v3-api
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: CORS_ORIGIN
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: LASTFM_API_KEY
+        sync: false
+      - key: TASTEDIVE_API_KEY
+        sync: false
+      - key: JAMENDO_CLIENT_ID
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
