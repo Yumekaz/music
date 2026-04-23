@@ -520,7 +520,7 @@ CORS_ORIGIN=http://localhost:5173
 
 ---
 
-## Build Order for Claude Code
+## Build Order for Codex
 
 ### Step 1 — Backend
 - Express + Redis setup
@@ -569,7 +569,7 @@ CORS_ORIGIN=http://localhost:5173
 
 ---
 
-## Implementation Notes for Claude Code
+## Implementation Notes for codex
 
 - YouTube IFrame must be **visible at all times when playing** — minimum 200×200 per YouTube ToS
 - Keep the YouTube IFrame mounted in the DOM across page navigation using a persistent layout component, not unmounting/remounting on route change

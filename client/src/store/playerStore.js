@@ -6,6 +6,7 @@ export const usePlayerStore = create((set, get) => ({
   isPlaying: false,
   positionMs: 0,
   durationMs: 0,
+  seekTarget: null,
   volume: 0.8,
   queue: [],
   playTrack: (track, sourceType = "youtube") =>
@@ -24,6 +25,7 @@ export const usePlayerStore = create((set, get) => ({
   },
   seek: (positionMs) => set({ positionMs }),
   setPosition: (positionMs) => set({ positionMs }),
+  setSeekTarget: (seekTarget) => set({ seekTarget }),
   setDuration: (durationMs) => set({ durationMs }),
   setVolume: (volume) => set({ volume }),
   setQueue: (queue) => set({ queue }),

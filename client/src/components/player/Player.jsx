@@ -55,15 +55,7 @@ export function Player({ online }) {
     recordHistory(currentTrack).catch(() => {});
   }, [currentTrack, isPlaying, recordHistory]);
 
-  useEffect(() => {
-    if (directEnabled || !currentTrack || !isPlaying || !online) return;
-    const timer = window.setInterval(() => {
-      usePlayerStore.setState((state) => ({
-        positionMs: Math.min((state.positionMs || 0) + 1000, state.durationMs || currentTrack.durationMs || 0)
-      }));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [currentTrack, directEnabled, isPlaying, online]);
+
 
   useEffect(() => {
     if (!online && isPlaying) pause();
@@ -120,7 +112,19 @@ export function Player({ online }) {
           onNext={next}
           onPrevious={previous}
         />
-        <ProgressBar positionMs={positionMs} durationMs={durationMs || currentTrack?.durationMs || 0} onSeek={setPosition} />
+        <ProgressBar
+          positionMs={positionMs}
+          durationMs={durationMs || currentTrack?.durationMs || 0}
+          onSeek={(pos) => {
+            setPosition(pos);
+            if (directEnabled) {
+              const audio = document.getElementById("direct-audio-player");
+              if (audio) audio.currentTime = pos / 1000;
+            } else {
+              usePlayerStore.getState().setSeekTarget(pos);
+            }
+          }}
+        />
       </div>
       <div className="player-tools">
         <VolumeControl volume={volume} onVolume={setVolume} />

@@ -26,10 +26,7 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="sidebar-note">
-        <Heart size={16} aria-hidden="true" />
-        <span>No-key fallback catalog is active until provider keys are set.</span>
-      </div>
+
     </aside>
   );
 }

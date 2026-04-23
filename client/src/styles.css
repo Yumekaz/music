@@ -453,9 +453,12 @@ h2 {
 }
 
 .artist-banner h1,
-.album-header h1,
-.now-details h1 {
+.album-header h1 {
   font-size: clamp(2.5rem, 7vw, 5.8rem);
+}
+
+.now-details h1 {
+  font-size: clamp(1.8rem, 4vw, 3.2rem);
 }
 
 .artist-banner p:last-of-type {
