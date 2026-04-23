@@ -6,9 +6,8 @@ import { usePlayerStore } from "../../store/playerStore.js";
 
 export function TrackCard({ track }) {
   const playTrack = usePlayerStore((state) => state.playTrack);
-  const sourceType = track.previewUrl ? "preview" : "youtube";
 
-  function startPlayback() {
+  function startPlayback(sourceType = "youtube") {
     if (sourceType === "preview") {
       playDirectAudio(track, sourceType).catch(() => {});
     }
@@ -28,7 +27,7 @@ export function TrackCard({ track }) {
           {track.artistName}
         </Link>
       </div>
-      <button type="button" className="play-button small" onClick={startPlayback} aria-label={`Play ${track.title}`}>
+      <button type="button" className="play-button small" onClick={() => startPlayback("youtube")} aria-label={`Play ${track.title}`}>
         <Play size={17} aria-hidden="true" />
       </button>
     </article>

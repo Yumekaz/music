@@ -13,7 +13,7 @@ export function TrackRow({ track, compact = false }) {
   const isLiked = useLibraryStore((state) => state.isLiked(track.id));
   const toggleLike = useLibraryStore((state) => state.toggleLike);
 
-  function startPlayback(sourceType = track.previewUrl ? "preview" : "youtube") {
+  function startPlayback(sourceType = "youtube") {
     if (sourceType === "preview" || sourceType === "jamendo") {
       playDirectAudio(track, sourceType).catch(() => {});
     }
@@ -40,7 +40,7 @@ export function TrackRow({ track, compact = false }) {
       ) : null}
       <span className="track-duration">{formatDuration(track.durationMs)}</span>
       <div className="track-actions">
-        <button type="button" className="icon-button" onClick={() => startPlayback()} aria-label={`Play ${track.title}`}>
+        <button type="button" className="icon-button" onClick={() => startPlayback("youtube")} aria-label={`Play ${track.title}`}>
           <Play size={17} aria-hidden="true" />
         </button>
         <button

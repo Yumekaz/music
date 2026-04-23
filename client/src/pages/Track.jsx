@@ -18,7 +18,7 @@ export default function Track() {
   if (track.isLoading) return <LoadingSkeleton label="Loading track" />;
   if (!track.data) return <p className="empty-state">Track not found.</p>;
 
-  function startPlayback(sourceType = track.data.previewUrl ? "preview" : "youtube") {
+  function startPlayback(sourceType = "youtube") {
     if (sourceType === "preview" || sourceType === "jamendo") {
       playDirectAudio(track.data, sourceType).catch(() => {});
     }
@@ -34,7 +34,7 @@ export default function Track() {
           <h1>{track.data.title}</h1>
           <h2>{track.data.artistName}</h2>
           <div className="hero-actions">
-            <button type="button" className="primary-action" onClick={() => startPlayback()}>
+            <button type="button" className="primary-action" onClick={() => startPlayback("youtube")}>
               <Play size={18} aria-hidden="true" />
               <span>Play</span>
             </button>
