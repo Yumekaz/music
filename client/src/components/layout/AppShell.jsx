@@ -3,13 +3,15 @@ import { OfflineBanner } from "./OfflineBanner.jsx";
 import { Sidebar } from "../sidebar/Sidebar.jsx";
 import { Player } from "../player/Player.jsx";
 import { useOnlineStatus } from "../../hooks/useOnlineStatus.js";
+import { usePlayerStore } from "../../store/playerStore.js";
 
 export function AppShell() {
   const online = useOnlineStatus();
   const location = useLocation();
+  const hasCurrentTrack = usePlayerStore((state) => Boolean(state.currentTrack));
 
   return (
-    <div className="app-shell" data-route={location.pathname}>
+    <div className="app-shell" data-route={location.pathname} data-player={hasCurrentTrack ? "active" : "idle"}>
       <Sidebar />
       <OfflineBanner online={online} />
       <main className="main-surface">

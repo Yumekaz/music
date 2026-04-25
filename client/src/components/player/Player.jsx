@@ -61,7 +61,9 @@ export function Player({ online }) {
     if (!online && isPlaying) pause();
   }, [isPlaying, online, pause]);
 
-  const disabled = !currentTrack || !online;
+  if (!currentTrack) return null;
+
+  const disabled = !online;
 
   async function handleToggle() {
     if (!currentTrack) return;

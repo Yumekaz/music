@@ -34,11 +34,14 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
     let ytPlayer = null;
 
     if (!containerRef.current) return;
+    const host = containerRef.current;
+    const mount = document.createElement("div");
+    host.replaceChildren(mount);
     
     loadYouTubeAPI().then(() => {
-      if (!isMounted || !containerRef.current) return;
+      if (!isMounted) return;
       
-      ytPlayer = new window.YT.Player(containerRef.current, {
+      ytPlayer = new window.YT.Player(mount, {
         videoId: videoId || "",
         host: "https://www.youtube-nocookie.com",
         playerVars: {
@@ -75,6 +78,7 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
       if (ytPlayer && typeof ytPlayer.destroy === "function") {
         ytPlayer.destroy();
       }
+      host.textContent = "";
       setPlayer(null);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

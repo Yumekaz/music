@@ -16,10 +16,15 @@ export function TrackCard({ track }) {
 
   return (
     <article className="track-card">
-      <Link to={`/tracks/${track.id}`}>
-        <ImageWithFallback src={track.artworkUrl} alt={track.title} className="track-card-art" />
-      </Link>
-      <div>
+      <div className="track-card-media">
+        <Link to={`/tracks/${track.id}`} className="track-card-art-link">
+          <ImageWithFallback src={track.artworkUrl} alt={track.title} className="track-card-art" />
+        </Link>
+        <button type="button" className="play-button small" onClick={() => startPlayback("youtube")} aria-label={`Play ${track.title}`}>
+          <Play size={17} aria-hidden="true" />
+        </button>
+      </div>
+      <div className="track-card-copy">
         <Link to={`/tracks/${track.id}`} className="track-title">
           {track.title}
         </Link>
@@ -27,9 +32,6 @@ export function TrackCard({ track }) {
           {track.artistName}
         </Link>
       </div>
-      <button type="button" className="play-button small" onClick={() => startPlayback("youtube")} aria-label={`Play ${track.title}`}>
-        <Play size={17} aria-hidden="true" />
-      </button>
     </article>
   );
 }
