@@ -254,6 +254,11 @@ h2 {
 .track-card-art-link {
   display: block;
   height: 100%;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .track-card-art,
@@ -282,6 +287,14 @@ h2 {
 .track-title {
   color: #f5f7f2;
   font-weight: 800;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  min-width: 0;
+  max-width: 100%;
+  cursor: pointer;
+  font: inherit;
 }
 
 .track-subtitle {
@@ -439,6 +452,58 @@ h2 {
   background: transparent;
 }
 
+.recent-searches {
+  display: grid;
+  gap: 14px;
+}
+
+.recent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 6px 0 14px;
+  border: 1px solid #242c24;
+  border-radius: 999px;
+  color: #dfe7dd;
+  background: #101510;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.recent-chip:hover {
+  background: #1a241a;
+  border-color: #1ed760;
+}
+
+.recent-chip span:first-of-type {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-chip-remove {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #9aa39a;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.recent-chip-remove:hover {
+  color: #f5f7f2;
+  background: rgba(255, 255, 255, 0.1);
+}
 .entity-grid,
 .playlist-grid {
   display: grid;

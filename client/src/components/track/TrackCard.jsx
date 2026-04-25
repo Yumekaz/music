@@ -17,20 +17,26 @@ export function TrackCard({ track }) {
   return (
     <article className="track-card">
       <div className="track-card-media">
-        <Link to={`/tracks/${track.id}`} className="track-card-art-link">
+        <button type="button" className="track-card-art-link" onClick={() => startPlayback("youtube")}>
           <ImageWithFallback src={track.artworkUrl} alt={track.title} className="track-card-art" />
-        </Link>
+        </button>
         <button type="button" className="play-button small" onClick={() => startPlayback("youtube")} aria-label={`Play ${track.title}`}>
           <Play size={17} aria-hidden="true" />
         </button>
       </div>
       <div className="track-card-copy">
-        <Link to={`/tracks/${track.id}`} className="track-title">
+        <button type="button" className="track-title" onClick={() => startPlayback("youtube")}>
           {track.title}
-        </Link>
-        <Link to={`/artists/${track.artistId}`} className="track-subtitle">
-          {track.artistName}
-        </Link>
+        </button>
+        {track.artistId ? (
+          <Link to={`/artists/${track.artistId}`} className="track-subtitle">
+            {track.artistName}
+          </Link>
+        ) : (
+          <span className="track-subtitle">
+            {track.artistName}
+          </span>
+        )}
       </div>
     </article>
   );

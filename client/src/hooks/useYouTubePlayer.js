@@ -29,6 +29,7 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
   const [player, setPlayer] = useState(null);
   const seekTarget = usePlayerStore((state) => state.seekTarget);
 
+  // Create the player once
   useEffect(() => {
     let isMounted = true;
     let ytPlayer = null;
@@ -48,6 +49,7 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
           autoplay: isPlaying ? 1 : 0,
           controls: 1,
           disablekb: 1,
+          enablejsapi: 1,
           fs: 0,
           modestbranding: 1,
           rel: 0,
@@ -84,12 +86,17 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once to mount the iframe
 
-  // Handle videoId change
+  // Handle videoId change — explicitly stop before loading new video
   useEffect(() => {
     if (player && typeof player.loadVideoById === "function") {
       if (videoId) {
+        player.stopVideo();
         player.loadVideoById(videoId);
-        if (!isPlaying) player.pauseVideo();
+        if (!isPlaying) {
+          setTimeout(() => {
+            if (typeof player.pauseVideo === "function") player.pauseVideo();
+          }, 300);
+        }
       } else {
         player.stopVideo();
       }
@@ -117,7 +124,7 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
 
   // Poll time updates
   useEffect(() => {
-    if (!player || !isPlaying) return;
+    if (!player || !isPlaying || !videoId) return;
     
     const interval = setInterval(() => {
       if (typeof player.getCurrentTime === "function") {
@@ -129,7 +136,7 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
     }, 500);
     
     return () => clearInterval(interval);
-  }, [player, isPlaying]);
+  }, [player, isPlaying, videoId]);
 
   return { containerRef };
 }

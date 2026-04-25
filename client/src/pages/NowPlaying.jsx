@@ -3,7 +3,6 @@ import { Equalizer } from "../components/equalizer/Equalizer.jsx";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { LyricsPanel } from "../components/lyrics/LyricsPanel.jsx";
 import { ProviderBadge } from "../components/common/ProviderBadge.jsx";
-import { YouTubeEmbed } from "../components/player/YouTubeEmbed.jsx";
 import { useDirectAudio } from "../hooks/useDirectAudio.js";
 import { isDirectAudioSource } from "../lib/resolvers.js";
 import { usePlayerStore } from "../store/playerStore.js";
@@ -44,11 +43,7 @@ export default function NowPlaying() {
   return (
     <div className="now-playing-page">
       <section className="now-media">
-        {sourceType === "youtube" ? (
-          <YouTubeEmbed track={currentTrack} isPlaying={isPlaying} className="large-youtube" />
-        ) : (
-          <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className="large-artwork" />
-        )}
+        <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className="large-artwork" />
       </section>
       <section className="now-details">
         <p>{sourceType === "youtube" ? "YouTube playback" : "Direct audio preview"}</p>

@@ -24,12 +24,18 @@ export function TrackRow({ track, compact = false }) {
     <article className={`track-row ${compact ? "compact" : ""}`}>
       <ImageWithFallback src={track.artworkUrl} alt={track.title} className="track-art" />
       <div className="track-main">
-        <Link to={`/tracks/${track.id}`} className="track-title">
+        <button type="button" className="track-title" onClick={() => startPlayback("youtube")}>
           {track.title}
-        </Link>
-        <Link to={`/artists/${track.artistId}`} className="track-subtitle">
-          {track.artistName} {track.albumName ? `- ${track.albumName}` : ""}
-        </Link>
+        </button>
+        {track.artistId ? (
+          <Link to={`/artists/${track.artistId}`} className="track-subtitle">
+            {track.artistName} {track.albumName ? `- ${track.albumName}` : ""}
+          </Link>
+        ) : (
+          <span className="track-subtitle">
+            {track.artistName} {track.albumName ? `- ${track.albumName}` : ""}
+          </span>
+        )}
       </div>
       {!compact ? (
         <div className="track-providers">

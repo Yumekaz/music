@@ -5,6 +5,7 @@ coverage/
 .env.local
 .DS_Store
 *.log
+*.png
 .vite/
 .turbo/
 client/dev-dist/

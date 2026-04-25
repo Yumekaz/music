@@ -61,6 +61,28 @@ export function Player({ online }) {
     if (!online && isPlaying) pause();
   }, [isPlaying, online, pause]);
 
+  useEffect(() => {
+    if (currentTrack && sourceType === "youtube" && !currentTrack.videoId) {
+      const title = encodeURIComponent(currentTrack.title || "");
+      const artist = encodeURIComponent(currentTrack.artistName || currentTrack.artist || "");
+      if (!title) return;
+      
+      fetch(`/api/tracks/resolve?title=${title}&artist=${artist}`)
+        .then((res) => res.json())
+        .then((resolvedTrack) => {
+          if (resolvedTrack && resolvedTrack.videoId) {
+            usePlayerStore.setState((state) => {
+              if (state.currentTrack?.id === currentTrack.id) {
+                return { currentTrack: { ...state.currentTrack, ...resolvedTrack } };
+              }
+              return state;
+            });
+          }
+        })
+        .catch(console.error);
+    }
+  }, [currentTrack, sourceType]);
+
   if (!currentTrack) return null;
 
   const disabled = !online;
