@@ -676,6 +676,13 @@ h2 {
   justify-content: space-between;
   gap: 16px;
   min-height: 36px;
+  flex-wrap: wrap;
+}
+
+.section-subtitle {
+  color: #9aa39a;
+  font-size: 0.82rem;
+  font-weight: 400;
 }
 
 .section-header span,

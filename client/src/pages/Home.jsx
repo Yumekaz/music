@@ -1,30 +1,60 @@
 import { useQuery } from "@tanstack/react-query";
 import { Download, RefreshCw } from "lucide-react";
+import { useMemo, useEffect } from "react";
 import { TrackCard } from "../components/track/TrackCard.jsx";
 import { TrackRow } from "../components/track/TrackRow.jsx";
 import { LoadingSkeleton } from "../components/common/LoadingSkeleton.jsx";
 import { usePWAInstall } from "../hooks/usePWAInstall.js";
-import { getCharts, getTrending } from "../services/search.js";
+import { getCharts, getRecommendations } from "../services/search.js";
 import { useLibraryStore } from "../store/libraryStore.js";
-import { useEffect } from "react";
 
 export default function Home() {
   const { canInstall, install } = usePWAInstall();
   const hydrate = useLibraryStore((state) => state.hydrate);
   const history = useLibraryStore((state) => state.history);
-  const trending = useQuery({ queryKey: ["trending"], queryFn: getTrending });
-  const charts = useQuery({ queryKey: ["charts"], queryFn: getCharts });
+  const likedTracks = useLibraryStore((state) => state.likedTracks);
 
   useEffect(() => {
     hydrate().catch(() => {});
   }, [hydrate]);
+
+  // Extract top seed artists from history + liked songs
+  const seedArtists = useMemo(() => {
+    const all = [...history, ...likedTracks];
+    const counts = {};
+    for (const track of all) {
+      const name = track.artistName || track.artist;
+      if (!name) continue;
+      counts[name] = (counts[name] || 0) + 1;
+    }
+    // Sort by frequency, pick top 5
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name)
+      .slice(0, 5);
+  }, [history, likedTracks]);
+
+  const hasSeeds = seedArtists.length > 0;
+
+  const recs = useQuery({
+    queryKey: ["recommendations", seedArtists],
+    queryFn: () => getRecommendations(seedArtists),
+    enabled: hasSeeds,
+    staleTime: 30 * 60 * 1000 // 30 min
+  });
+
+  const charts = useQuery({ queryKey: ["charts"], queryFn: getCharts });
 
   return (
     <div className="page-stack">
       <section className="home-hero">
         <div className="home-copy">
           <p>Music V3</p>
-          <h1>Search, play, preview, and keep your listening shelf offline.</h1>
+          <h1>
+            {hasSeeds
+              ? `Welcome back.`
+              : `Search, play, preview, and keep your listening shelf offline.`}
+          </h1>
           <div className="hero-actions">
             {canInstall ? (
               <button type="button" className="primary-action" onClick={install}>
@@ -32,57 +62,79 @@ export default function Home() {
                 <span>Install</span>
               </button>
             ) : null}
-            <button type="button" className="utility-button" onClick={() => trending.refetch()}>
-              <RefreshCw size={16} aria-hidden="true" />
-              <span>Refresh</span>
-            </button>
+            {hasSeeds && (
+              <button type="button" className="utility-button" onClick={() => recs.refetch()}>
+                <RefreshCw size={16} aria-hidden="true" />
+                <span>Refresh</span>
+              </button>
+            )}
           </div>
         </div>
       </section>
 
-      <section className="section-block">
-        <header className="section-header">
-          <h2>Trending</h2>
-          <span>Region IN</span>
-        </header>
-        {trending.isLoading ? (
-          <LoadingSkeleton label="Loading trending tracks" />
-        ) : (
+      {/* Personalized "For You" sections */}
+      {recs.isLoading && hasSeeds ? (
+        <section className="section-block">
+          <LoadingSkeleton label="Building your recommendations" />
+        </section>
+      ) : null}
+
+      {recs.data?.sections?.map((section) => (
+        <section key={section.seedArtist} className="section-block">
+          <header className="section-header">
+            <h2>{section.title}</h2>
+            {section.similarArtists?.length > 0 && (
+              <span className="section-subtitle">
+                Also: {section.similarArtists.join(", ")}
+              </span>
+            )}
+          </header>
           <div className="card-strip">
-            {trending.data?.tracks?.map((track) => (
+            {section.tracks.map((track) => (
               <TrackCard key={track.id} track={track} />
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      ))}
 
-      <section className="section-block">
-        <header className="section-header">
-          <h2>Charts</h2>
-          <span>Last.fm or fallback</span>
-        </header>
-        <div className="track-list">
-          {charts.data?.tracks?.slice(0, 6).map((track) => (
-            <TrackRow key={track.id} track={track} compact />
-          ))}
-        </div>
-      </section>
-
-      <section className="section-block">
-        <header className="section-header">
-          <h2>Recently played</h2>
-          <span>IndexedDB</span>
-        </header>
-        {history.length ? (
+      {/* Show "Recently played" if user has history */}
+      {history.length > 0 && (
+        <section className="section-block">
+          <header className="section-header">
+            <h2>Recently played</h2>
+          </header>
           <div className="track-list">
             {history.slice(0, 5).map((track) => (
               <TrackRow key={track.id} track={track} compact />
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Charts as a fallback / always-present section */}
+      <section className="section-block">
+        <header className="section-header">
+          <h2>{hasSeeds ? "Global Charts" : "Charts"}</h2>
+        </header>
+        {charts.isLoading ? (
+          <LoadingSkeleton label="Loading charts" />
         ) : (
-          <p className="empty-state">Played tracks will appear here.</p>
+          <div className="track-list">
+            {charts.data?.tracks?.slice(0, 6).map((track) => (
+              <TrackRow key={track.id} track={track} compact />
+            ))}
+          </div>
         )}
       </section>
+
+      {/* If no history yet, show empty state */}
+      {!hasSeeds && (
+        <section className="section-block">
+          <p className="empty-state">
+            Start listening! Your personalized feed will appear here once you play some songs.
+          </p>
+        </section>
+      )}
     </div>
   );
 }

@@ -18,3 +18,16 @@ export async function apiGet(path, params) {
   }
   return response.json();
 }
+
+export async function apiPost(path, body) {
+  const response = await fetch(buildUrl(path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `Request failed: ${response.status}`);
+  }
+  return response.json();
+}
