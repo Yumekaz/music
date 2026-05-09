@@ -44,18 +44,16 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
       
       ytPlayer = new window.YT.Player(mount, {
         videoId: videoId || "",
-        host: "https://www.youtube-nocookie.com",
         playerVars: {
           autoplay: isPlaying ? 1 : 0,
-          controls: 1,
+          controls: 0,
           disablekb: 1,
           enablejsapi: 1,
           fs: 0,
           modestbranding: 1,
           rel: 0,
           iv_load_policy: 3,
-          playsinline: 1,
-          origin: window.location.origin
+          playsinline: 1
         },
         events: {
           onReady: (event) => {
