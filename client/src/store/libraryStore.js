@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   addHistoryTrack,
   deleteLikedTrack,
+  deletePlaylist as idbDeletePlaylist,
   listHistoryTracks,
   listLikedTracks,
   listPlaylists,
@@ -41,6 +42,30 @@ export const useLibraryStore = create((set, get) => ({
   },
   savePlaylist: async (playlist) => {
     await savePlaylist(playlist);
+    set({ playlists: await listPlaylists() });
+  },
+  deletePlaylist: async (id) => {
+    await idbDeletePlaylist(id);
+    set({ playlists: await listPlaylists() });
+  },
+  addToPlaylist: async (playlistId, track) => {
+    const playlist = get().playlists.find((p) => p.id === playlistId);
+    if (!playlist) return;
+    const exists = (playlist.tracks || []).some((t) => t.id === track.id);
+    if (exists) return;
+    await savePlaylist({
+      ...playlist,
+      tracks: [...(playlist.tracks || []), track]
+    });
+    set({ playlists: await listPlaylists() });
+  },
+  removeFromPlaylist: async (playlistId, trackId) => {
+    const playlist = get().playlists.find((p) => p.id === playlistId);
+    if (!playlist) return;
+    await savePlaylist({
+      ...playlist,
+      tracks: (playlist.tracks || []).filter((t) => t.id !== trackId)
+    });
     set({ playlists: await listPlaylists() });
   }
 }));

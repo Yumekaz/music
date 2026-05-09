@@ -50,3 +50,7 @@ export async function savePlaylist(playlist) {
     updatedAt: Date.now()
   });
 }
+
+export async function deletePlaylist(id) {
+  return (await db()).delete("playlists", id);
+}

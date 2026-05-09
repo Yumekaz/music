@@ -1,69 +1,107 @@
+import { Clock, Heart, Play, Shuffle } from "lucide-react";
 import { useEffect } from "react";
-import { TrackRow } from "../components/track/TrackRow.jsx";
+import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { useLibraryStore } from "../store/libraryStore.js";
+import { usePlayerStore } from "../store/playerStore.js";
 
 export default function Library() {
-  const { likedTracks, history, playlists, hydrate, hydrated, savePlaylist } = useLibraryStore();
+  const { likedTracks, hydrate } = useLibraryStore();
+  const playTrack = usePlayerStore((state) => state.playTrack);
+  const setQueue = usePlayerStore((state) => state.setQueue);
+  const currentTrack = usePlayerStore((state) => state.currentTrack);
+  const isPlaying = usePlayerStore((state) => state.isPlaying);
 
   useEffect(() => {
     hydrate().catch(() => {});
   }, [hydrate]);
 
-  function createPlaylist() {
-    savePlaylist({
-      id: `playlist-${Date.now()}`,
-      name: "New playlist",
-      tracks: [],
-      createdAt: Date.now()
-    });
+  function playAll() {
+    if (!likedTracks.length) return;
+    setQueue(likedTracks);
+    playTrack(likedTracks[0], "youtube");
   }
+
+  function shufflePlay() {
+    if (!likedTracks.length) return;
+    const shuffled = [...likedTracks].sort(() => Math.random() - 0.5);
+    setQueue(shuffled);
+    playTrack(shuffled[0], "youtube");
+  }
+
+  const totalMs = likedTracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
+  const totalMinutes = Math.round(totalMs / 60000);
 
   return (
     <div className="page-stack">
-      <section className="section-block">
-        <header className="section-header">
-          <h1>Library</h1>
-          <span>{hydrated ? "Ready offline" : "Syncing"}</span>
-        </header>
-      </section>
-      <section className="section-block">
-        <header className="section-header">
-          <h2>Liked tracks</h2>
-          <span>{likedTracks.length}</span>
-        </header>
-        <div className="track-list">
-          {likedTracks.map((track) => (
-            <TrackRow key={track.id} track={track} compact />
-          ))}
+      <header className="liked-header">
+        <div className="liked-gradient-icon liked-gradient-icon--large">
+          <Heart size={64} fill="white" />
         </div>
-        {!likedTracks.length ? <p className="empty-state">Liked tracks will stay available offline.</p> : null}
-      </section>
-      <section className="section-block">
-        <header className="section-header">
-          <h2>Playlists</h2>
-          <button type="button" className="utility-button" onClick={createPlaylist}>
-            New
-          </button>
-        </header>
-        <div className="playlist-grid">
-          {playlists.map((playlist) => (
-            <a href={`/playlists/${playlist.id}`} key={playlist.id} className="playlist-tile">
-              <strong>{playlist.name}</strong>
-              <span>{playlist.tracks?.length || 0} tracks</span>
-            </a>
-          ))}
+        <div className="liked-header-info">
+          <span className="liked-label">Playlist</span>
+          <h1 className="liked-title">Liked Songs</h1>
+          <span className="liked-meta">
+            {likedTracks.length} song{likedTracks.length !== 1 ? "s" : ""}
+            {totalMinutes > 0 ? `, about ${totalMinutes} min` : ""}
+          </span>
         </div>
-      </section>
-      <section className="section-block">
-        <header className="section-header">
-          <h2>History</h2>
-        </header>
-        <div className="track-list">
-          {history.slice(0, 8).map((track) => (
-            <TrackRow key={track.id} track={track} compact />
-          ))}
+      </header>
+
+      <div className="liked-controls">
+        <button type="button" className="play-button play-button--large" onClick={playAll} disabled={!likedTracks.length} aria-label="Play all">
+          <Play size={24} fill="currentColor" />
+        </button>
+        <button type="button" className="icon-button" onClick={shufflePlay} disabled={!likedTracks.length} aria-label="Shuffle">
+          <Shuffle size={20} />
+        </button>
+      </div>
+
+      {likedTracks.length > 0 ? (
+        <div className="numbered-track-list">
+          <div className="ntl-header">
+            <span className="ntl-num">#</span>
+            <span className="ntl-title-col">Title</span>
+            <span className="ntl-album">Album</span>
+            <span className="ntl-duration"><Clock size={14} /></span>
+          </div>
+          {likedTracks.map((track, index) => {
+            const active = currentTrack?.id === track.id;
+            return (
+              <button
+                key={track.id}
+                type="button"
+                className={`ntl-row ${active ? "active" : ""}`}
+                onClick={() => {
+                  setQueue(likedTracks);
+                  playTrack(track, "youtube");
+                }}
+              >
+                <span className={`ntl-num ${active && isPlaying ? "playing" : ""}`}>
+                  {active && isPlaying ? "♫" : index + 1}
+                </span>
+                <div className="ntl-track">
+                  <ImageWithFallback src={track.artworkUrl} alt={track.title} className="ntl-art" />
+                  <div className="ntl-track-info">
+                    <span className={`ntl-track-title ${active ? "active" : ""}`}>{track.title}</span>
+                    <span className="ntl-track-artist">{track.artistName}</span>
+                  </div>
+                </div>
+                <span className="ntl-album">{track.albumName || ""}</span>
+                <span className="ntl-duration">{formatDuration(track.durationMs)}</span>
+              </button>
+            );
+          })}
         </div>
-      </section>
+      ) : (
+        <p className="empty-state">Songs you like will appear here.</p>
+      )}
     </div>
   );
+}
+
+function formatDuration(ms) {
+  if (!ms) return "0:00";
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
