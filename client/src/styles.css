@@ -893,6 +893,35 @@ h2 {
   color: #1ed760;
 }
 
+.icon-button--small {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #9aa39a;
+  position: relative;
+}
+
+.icon-button--small:hover {
+  color: #f5f7f2;
+}
+
+.icon-button.active {
+  color: #1ed760;
+}
+
+.icon-button.active::after {
+  content: "";
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #1ed760;
+}
+
 .search-heading {
   display: grid;
   gap: 18px;
