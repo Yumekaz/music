@@ -77,7 +77,8 @@ export default function Library() {
                 }}
               >
                 <span className={`ntl-num ${active && isPlaying ? "playing" : ""}`}>
-                  {active && isPlaying ? "♫" : index + 1}
+                  <span className="ntl-num-text">{active && isPlaying ? "♫" : index + 1}</span>
+                  <Play size={14} className="ntl-play-icon" />
                 </span>
                 <div className="ntl-track">
                   <ImageWithFallback src={track.artworkUrl} alt={track.title} className="ntl-art" />

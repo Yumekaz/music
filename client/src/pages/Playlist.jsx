@@ -2,6 +2,7 @@ import { Clock, ListMusic, Pause, Play, Shuffle, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
+import { useColorExtract } from "../hooks/useColorExtract.js";
 import { useLibraryStore } from "../store/libraryStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 
@@ -35,6 +36,7 @@ export default function Playlist() {
   const artworks = tracks.slice(0, 4).map((t) => t.artworkUrl).filter(Boolean);
   const totalMs = tracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
   const totalMinutes = Math.round(totalMs / 60000);
+  const dominantColor = useColorExtract(artworks[0]);
 
   function playAll() {
     if (!tracks.length) return;
@@ -72,7 +74,10 @@ export default function Playlist() {
 
   return (
     <div className="page-stack">
-      <header className="playlist-header">
+      <header
+        className="playlist-header"
+        style={dominantColor ? { background: `linear-gradient(180deg, rgba(${dominantColor}, 0.45) 0%, transparent 100%)` } : undefined}
+      >
         <div className="playlist-header-art">
           {artworks.length >= 4 ? (
             <div className="playlist-mosaic">
@@ -144,7 +149,8 @@ export default function Playlist() {
                   }}
                 >
                   <span className={`ntl-num ${active && isPlaying ? "playing" : ""}`}>
-                    {active && isPlaying ? "♫" : index + 1}
+                    <span className="ntl-num-text">{active && isPlaying ? "♫" : index + 1}</span>
+                    <Play size={14} className="ntl-play-icon" />
                   </span>
                   <div className="ntl-track">
                     <ImageWithFallback src={track.artworkUrl} alt={track.title} className="ntl-art" />

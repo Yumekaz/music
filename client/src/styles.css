@@ -1564,3 +1564,397 @@ input[type="range"] {
     display: none;
   }
 }
+
+/* ─── Toast Notifications ─── */
+
+.toast-container {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  background: #282e28;
+  color: #f5f7f2;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: toastIn 300ms ease forwards;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Track Context Menu ─── */
+
+.track-menu-wrapper {
+  position: relative;
+}
+
+.track-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  min-width: 200px;
+  background: #282e28;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 4px 0;
+  z-index: 1000;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  animation: menuIn 150ms ease;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.track-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 0;
+  background: transparent;
+  color: #f5f7f2;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.track-menu-item:hover {
+  background: #1ed76020;
+}
+
+.track-menu-item.muted {
+  color: #9aa39a;
+  cursor: default;
+}
+
+.track-menu-arrow {
+  margin-left: auto;
+  font-size: 1.1rem;
+  color: #9aa39a;
+}
+
+.track-menu-sub {
+  border-top: 1px solid #333;
+  padding-top: 4px;
+}
+
+/* ─── Queue Panel ─── */
+
+.queue-panel {
+  position: fixed;
+  right: 0;
+  bottom: 80px;
+  width: min(380px, 100vw);
+  max-height: calc(100vh - 120px);
+  background: #141914;
+  border: 1px solid #242c24;
+  border-radius: 12px 12px 0 0;
+  overflow-y: auto;
+  z-index: 500;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+  animation: queueSlideIn 250ms ease;
+}
+
+@keyframes queueSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 8px;
+  position: sticky;
+  top: 0;
+  background: #141914;
+  z-index: 1;
+}
+
+.queue-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.queue-section {
+  padding: 8px 20px 16px;
+}
+
+.queue-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9aa39a;
+  margin-bottom: 8px;
+}
+
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-radius: 6px;
+}
+
+.queue-item.active {
+  color: #1ed760;
+}
+
+.queue-art {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.queue-info {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.queue-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-artist {
+  font-size: 0.75rem;
+  color: #9aa39a;
+}
+
+.queue-empty {
+  color: #9aa39a;
+  font-size: 0.82rem;
+  padding: 8px 0;
+}
+
+/* ─── Player Meta Row (title + heart) ─── */
+
+.player-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-heart {
+  flex-shrink: 0;
+  color: #9aa39a;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.player-bar:hover .player-heart,
+.player-heart.liked {
+  opacity: 1;
+}
+
+.player-heart.liked {
+  color: #1ed760;
+}
+
+/* ─── Hover Play Icon on Numbered Tracks ─── */
+
+.ntl-row .ntl-play-icon {
+  display: none;
+}
+
+.ntl-row:hover .ntl-num-text {
+  display: none;
+}
+
+.ntl-row:hover .ntl-play-icon {
+  display: inline;
+}
+
+/* ─── Page Transitions ─── */
+
+.main-surface > * {
+  animation: pageIn 200ms ease;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Mobile Responsive (full Spotify-style) ─── */
+
+@media (max-width: 768px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mobile-nav {
+    display: flex;
+  }
+
+  .main-surface {
+    padding-bottom: 140px;
+  }
+
+  .card-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ntl-album {
+    display: none;
+  }
+
+  .track-providers {
+    display: none;
+  }
+
+  .track-row {
+    grid-template-columns: 48px minmax(0, 1fr) auto auto;
+  }
+
+  .playlist-header {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .now-playing-page {
+    grid-template-columns: 1fr;
+    padding: 24px 16px;
+  }
+}
+
+/* ─── Artist Page ─── */
+
+.artist-banner {
+  display: flex;
+  gap: 32px;
+  align-items: flex-end;
+  padding: 32px;
+  border-radius: 12px;
+  min-height: 220px;
+}
+
+.artist-image {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+}
+
+.artist-bio {
+  color: #9aa39a;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+.similar-artist-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #141914;
+  border-radius: 8px;
+  transition: background 200ms ease;
+}
+
+.similar-artist-card:hover {
+  background: #1c221c;
+}
+
+.similar-artist-img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.similar-artist-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ─── Mobile Bottom Nav ─── */
+
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #080b0a;
+  border-top: 1px solid #242c24;
+  padding: 8px 0 env(safe-area-inset-bottom, 8px);
+  z-index: 600;
+  justify-content: space-around;
+}
+
+.mobile-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: #9aa39a;
+  padding: 4px 12px;
+}
+
+.mobile-nav a.active {
+  color: #f5f7f2;
+}
+

@@ -84,17 +84,41 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once to mount the iframe
 
-  // Handle videoId change — explicitly stop before loading new video
+  // Handle videoId change — cross-fade: fade out current, load new, fade in
   useEffect(() => {
     if (player && typeof player.loadVideoById === "function") {
       if (videoId) {
-        player.stopVideo();
-        player.loadVideoById(videoId);
-        if (!isPlaying) {
-          setTimeout(() => {
-            if (typeof player.pauseVideo === "function") player.pauseVideo();
-          }, 300);
-        }
+        // Cross-fade out
+        const currentVol = typeof player.getVolume === "function" ? player.getVolume() : 100;
+        const steps = 8;
+        const stepMs = 100;
+        let step = 0;
+
+        const fadeOut = setInterval(() => {
+          step++;
+          if (typeof player.setVolume === "function") {
+            player.setVolume(Math.max(0, currentVol * (1 - step / steps)));
+          }
+          if (step >= steps) {
+            clearInterval(fadeOut);
+            player.stopVideo();
+            player.loadVideoById(videoId);
+            // Fade back in
+            let inStep = 0;
+            const fadeIn = setInterval(() => {
+              inStep++;
+              if (typeof player.setVolume === "function") {
+                player.setVolume(Math.min(currentVol, currentVol * (inStep / steps)));
+              }
+              if (inStep >= steps) clearInterval(fadeIn);
+            }, stepMs);
+            if (!isPlaying) {
+              setTimeout(() => {
+                if (typeof player.pauseVideo === "function") player.pauseVideo();
+              }, 300);
+            }
+          }
+        }, stepMs);
       } else {
         player.stopVideo();
       }

@@ -33,6 +33,13 @@ export const usePlayerStore = create((set, get) => ({
   setDuration: (durationMs) => set({ durationMs }),
   setVolume: (volume) => set({ volume }),
   setQueue: (queue) => set({ queue }),
+  addToQueue: (track) =>
+    set((state) => {
+      if (state.queue.some((t) => t.id === track.id)) return state;
+      return { queue: [...state.queue, track] };
+    }),
+  removeFromQueue: (trackId) =>
+    set((state) => ({ queue: state.queue.filter((t) => t.id !== trackId) })),
 
   toggleShuffle: () => set((state) => ({ shuffle: !state.shuffle })),
   cycleRepeat: () =>

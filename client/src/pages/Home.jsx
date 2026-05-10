@@ -49,11 +49,11 @@ export default function Home() {
     <div className="page-stack">
       <section className="home-hero">
         <div className="home-copy">
-          <p>Music V3</p>
+          <p>Reverb</p>
           <h1>
             {hasSeeds
               ? `Welcome back.`
-              : `Search, play, preview, and keep your listening shelf offline.`}
+              : `Music that echoes your taste.`}
           </h1>
           <div className="hero-actions">
             {canInstall ? (

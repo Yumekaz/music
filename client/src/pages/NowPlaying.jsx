@@ -3,6 +3,7 @@ import { Equalizer } from "../components/equalizer/Equalizer.jsx";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { LyricsPanel } from "../components/lyrics/LyricsPanel.jsx";
 import { ProviderBadge } from "../components/common/ProviderBadge.jsx";
+import { useColorExtract } from "../hooks/useColorExtract.js";
 import { useDirectAudio } from "../hooks/useDirectAudio.js";
 import { isDirectAudioSource } from "../lib/resolvers.js";
 import { usePlayerStore } from "../store/playerStore.js";
@@ -31,6 +32,8 @@ export default function NowPlaying() {
     onEnded: next
   });
 
+  const dominantColor = useColorExtract(currentTrack?.artworkUrl);
+
   if (!currentTrack) {
     return (
       <div className="empty-page">
@@ -41,7 +44,10 @@ export default function NowPlaying() {
   }
 
   return (
-    <div className="now-playing-page">
+    <div
+      className="now-playing-page"
+      style={dominantColor ? { background: `linear-gradient(180deg, rgba(${dominantColor}, 0.35) 0%, #080b0a 60%)` } : undefined}
+    >
       <section className="now-media">
         <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className="large-artwork" />
       </section>

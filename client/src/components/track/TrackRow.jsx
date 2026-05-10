@@ -1,7 +1,8 @@
-import { Heart, ListPlus, Play, Radio } from "lucide-react";
+import { Heart, Play, Radio } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { ProviderBadge } from "../common/ProviderBadge.jsx";
+import { TrackMenu } from "./TrackMenu.jsx";
 import { playDirectAudio } from "../../lib/directAudio.js";
 import { formatDuration } from "../../lib/formatters.js";
 import { useLibraryStore } from "../../store/libraryStore.js";
@@ -20,6 +21,8 @@ export function TrackRow({ track, compact = false }) {
     playTrack(track, sourceType);
   }
 
+  const artistSlug = (track.artistName || "").toLowerCase().replace(/\s+/g, "-");
+
   return (
     <article className={`track-row ${compact ? "compact" : ""}`}>
       <ImageWithFallback src={track.artworkUrl} alt={track.title} className="track-art" />
@@ -27,15 +30,9 @@ export function TrackRow({ track, compact = false }) {
         <button type="button" className="track-title" onClick={() => startPlayback("youtube")}>
           {track.title}
         </button>
-        {track.artistId ? (
-          <Link to={`/artists/${track.artistId}`} className="track-subtitle">
-            {track.artistName} {track.albumName ? `- ${track.albumName}` : ""}
-          </Link>
-        ) : (
-          <span className="track-subtitle">
-            {track.artistName} {track.albumName ? `- ${track.albumName}` : ""}
-          </span>
-        )}
+        <Link to={`/artists/lastfm-${artistSlug}`} className="track-subtitle">
+          {track.artistName} {track.albumName ? `- ${track.albumName}` : ""}
+        </Link>
       </div>
       {!compact ? (
         <div className="track-providers">
@@ -49,21 +46,10 @@ export function TrackRow({ track, compact = false }) {
         <button type="button" className="icon-button" onClick={() => startPlayback("youtube")} aria-label={`Play ${track.title}`}>
           <Play size={17} aria-hidden="true" />
         </button>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => track.previewUrl && startPlayback("preview")}
-          disabled={!track.previewUrl}
-          aria-label={`Preview ${track.title}`}
-        >
-          <Radio size={17} aria-hidden="true" />
-        </button>
         <button type="button" className={`icon-button ${isLiked ? "liked" : ""}`} onClick={() => toggleLike(track)} aria-label="Toggle like">
           <Heart size={17} aria-hidden="true" />
         </button>
-        <button type="button" className="icon-button" onClick={() => setQueue([track])} aria-label="Start queue here">
-          <ListPlus size={17} aria-hidden="true" />
-        </button>
+        <TrackMenu track={track} />
       </div>
     </article>
   );
