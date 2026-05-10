@@ -866,6 +866,10 @@ h2 {
   gap: 8px;
 }
 
+.player-controls {
+  justify-content: center;
+}
+
 .icon-button,
 .play-button {
   width: 38px;
@@ -1135,9 +1139,9 @@ h2 {
   bottom: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: 96px minmax(160px, 260px) minmax(260px, 1fr) minmax(220px, auto);
+  grid-template-columns: 92px minmax(140px, 280px) 1fr minmax(180px, auto);
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   min-height: 112px;
   padding: 10px 18px;
   border-top: 1px solid #242c24;
@@ -1180,8 +1184,37 @@ h2 {
 }
 
 .player-meta {
-  display: grid;
-  gap: 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.player-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.player-heart {
+  flex-shrink: 0;
+  color: #9aa39a;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.player-bar:hover .player-heart,
+.player-heart.liked {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.player-heart.liked {
+  color: #1ed760;
 }
 
 .player-title {
@@ -1190,10 +1223,14 @@ h2 {
   color: #f5f7f2;
   background: transparent;
   text-align: left;
-  font-weight: 900;
+  font-weight: 800;
+  font-size: 0.95rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .player-workspace {
@@ -1509,28 +1546,29 @@ input[type="range"] {
   }
 
   .player-bar {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: start;
-    min-height: 104px;
-    gap: 6px;
-    padding: 8px 12px;
+    grid-template-columns: 72px 1fr auto;
+    grid-template-areas: 
+      "art meta tools"
+      "controls controls controls"
+      "progress progress progress";
+    min-height: 140px;
+    gap: 10px;
+    padding: 12px;
   }
-
-  .player-media {
-    display: none;
-  }
-
-  .player-meta {
+  
+  .player-media { grid-area: art; display: block !important; }
+  .player-meta { grid-area: meta; }
+  .player-tools { grid-area: tools; display: flex !important; }
+  .player-workspace { 
+    grid-area: controls; 
+    display: flex;
+    flex-direction: column;
     width: 100%;
-  }
-
-  .player-workspace {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 42px minmax(0, 1fr);
-    align-items: center;
     gap: 8px;
   }
+  /* Progress bar at the very bottom */
+  .progress-wrap { order: 2; }
+  .player-controls { order: 1; }
 
   .player-controls .icon-button {
     display: none;
@@ -1774,27 +1812,7 @@ input[type="range"] {
 
 /* ─── Player Meta Row (title + heart) ─── */
 
-.player-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.player-heart {
-  flex-shrink: 0;
-  color: #9aa39a;
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-.player-bar:hover .player-heart,
-.player-heart.liked {
-  opacity: 1;
-}
-
-.player-heart.liked {
-  color: #1ed760;
-}
+/* Removed redundant player meta row styles */
 
 /* ─── Hover Play Icon on Numbered Tracks ─── */
 
