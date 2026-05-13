@@ -4,6 +4,7 @@ import { usePlayerStore } from "../../store/playerStore.js";
 export function PlayerControls({ disabled, isPlaying, onToggle, onNext, onPrevious }) {
   const shuffle = usePlayerStore((state) => state.shuffle);
   const repeat = usePlayerStore((state) => state.repeat);
+  const isBuffering = usePlayerStore((state) => state.isBuffering);
   const toggleShuffle = usePlayerStore((state) => state.toggleShuffle);
   const cycleRepeat = usePlayerStore((state) => state.cycleRepeat);
 
@@ -19,15 +20,27 @@ export function PlayerControls({ disabled, isPlaying, onToggle, onNext, onPrevio
         <Shuffle size={16} aria-hidden="true" />
       </button>
 
-      <button type="button" className="icon-button" onClick={onPrevious} disabled={disabled} aria-label="Previous track">
+      <button type="button" className="icon-button" onClick={onPrevious} disabled={disabled || isBuffering} aria-label="Previous track">
         <SkipBack size={18} aria-hidden="true" />
       </button>
 
-      <button type="button" className="play-button" onClick={onToggle} disabled={disabled} aria-label={isPlaying ? "Pause" : "Play"}>
-        {isPlaying ? <Pause size={22} aria-hidden="true" /> : <Play size={22} aria-hidden="true" />}
+      <button
+        type="button"
+        className={`play-button ${isBuffering ? "buffering" : ""}`}
+        onClick={onToggle}
+        disabled={disabled}
+        aria-label={isBuffering ? "Loading" : isPlaying ? "Pause" : "Play"}
+      >
+        {isBuffering ? (
+          <span className="buffering-spinner" aria-hidden="true" />
+        ) : isPlaying ? (
+          <Pause size={22} aria-hidden="true" />
+        ) : (
+          <Play size={22} aria-hidden="true" />
+        )}
       </button>
 
-      <button type="button" className="icon-button" onClick={onNext} disabled={disabled} aria-label="Next track">
+      <button type="button" className="icon-button" onClick={onNext} disabled={disabled || isBuffering} aria-label="Next track">
         <SkipForward size={18} aria-hidden="true" />
       </button>
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Heart, ListMusic, ListPlus, Play, MoreHorizontal, User } from "lucide-react";
+import { Heart, ListMusic, ListPlus, Play, MoreHorizontal, User, Disc3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
@@ -17,6 +17,7 @@ export function TrackMenu({ track }) {
   const toggleLike = useLibraryStore((state) => state.toggleLike);
   const addToPlaylist = useLibraryStore((state) => state.addToPlaylist);
   const addToQueue = usePlayerStore((state) => state.addToQueue);
+  const playNext = usePlayerStore((state) => state.playNext);
 
   // Close on outside click
   useEffect(() => {
@@ -38,9 +39,15 @@ export function TrackMenu({ track }) {
     setOpen(false);
   }
 
+  function handlePlayNext() {
+    playNext(track);
+    showToast?.(`"${track.title}" will play next`);
+    setOpen(false);
+  }
+
   function handleAddToQueue() {
     addToQueue(track);
-    showToast?.("Added to Queue");
+    showToast?.("Added to end of queue");
     setOpen(false);
   }
 
@@ -57,6 +64,16 @@ export function TrackMenu({ track }) {
     setOpen(false);
   }
 
+  function handleGoToAlbum() {
+    if (track.albumId) {
+      navigate(`/albums/${track.albumId}`);
+    } else {
+      const slug = (track.albumName || "").toLowerCase().replace(/\s+/g, "-");
+      navigate(`/albums/${slug}`);
+    }
+    setOpen(false);
+  }
+
   return (
     <div className="track-menu-wrapper" ref={menuRef}>
       <button
@@ -70,10 +87,17 @@ export function TrackMenu({ track }) {
 
       {open && (
         <div className="track-menu">
+          <button type="button" className="track-menu-item track-menu-item--highlight" onClick={handlePlayNext}>
+            <Play size={16} />
+            <span>Play next</span>
+          </button>
+
           <button type="button" className="track-menu-item" onClick={handleAddToQueue}>
             <ListMusic size={16} />
-            <span>Add to Queue</span>
+            <span>Add to queue</span>
           </button>
+
+          <div className="track-menu-divider" />
 
           <button
             type="button"
@@ -81,7 +105,7 @@ export function TrackMenu({ track }) {
             onClick={() => setShowPlaylists(!showPlaylists)}
           >
             <ListPlus size={16} />
-            <span>Add to Playlist</span>
+            <span>Add to playlist</span>
             <span className="track-menu-arrow">›</span>
           </button>
 
@@ -107,10 +131,19 @@ export function TrackMenu({ track }) {
             <span>{isLiked ? "Remove from Liked" : "Like"}</span>
           </button>
 
+          <div className="track-menu-divider" />
+
           <button type="button" className="track-menu-item" onClick={handleGoToArtist}>
             <User size={16} />
-            <span>Go to Artist</span>
+            <span>Go to artist</span>
           </button>
+
+          {(track.albumId || track.albumName) && (
+            <button type="button" className="track-menu-item" onClick={handleGoToAlbum}>
+              <Disc3 size={16} />
+              <span>Go to album</span>
+            </button>
+          )}
         </div>
       )}
     </div>

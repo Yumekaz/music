@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "../store/playerStore.js";
+import { useSettingsStore } from "../store/settingsStore.js";
 
 function loadYouTubeAPI() {
   return new Promise((resolve) => {
@@ -78,6 +79,7 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
             const YT = window.YT.PlayerState;
 
             if (event.data === YT.BUFFERING) {
+              usePlayerStore.getState().setBuffering(true);
               // pauseVideo() is a no-op during buffering — record the intent instead.
               if (!storeIsPlaying) {
                 pendingPauseRef.current = true;
@@ -85,27 +87,31 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
             }
 
             if (event.data === YT.PLAYING) {
-              // Two reasons we may need to pause immediately after PLAYING fires:
-              // 1. A pause was requested while the video was still buffering.
-              // 2. Store is paused but YouTube auto-resumed (e.g. after a seek).
+              usePlayerStore.getState().setBuffering(false);
+              // Populate available qualities once the video starts
+              try {
+                const qualities = event.target.getAvailableQualityLevels?.() || [];
+                if (qualities.length) {
+                  useSettingsStore.getState().setYoutubeAvailableQualities(qualities);
+                }
+              } catch { /* ignore */ }
+
               if (pendingPauseRef.current || !storeIsPlaying) {
                 pendingPauseRef.current = false;
-                // Defer by one tick — calling pauseVideo() synchronously inside
-                // onStateChange can be ignored by some browsers/YT versions.
                 setTimeout(() => event.target.pauseVideo(), 0);
               }
             }
 
             if (event.data === YT.PAUSED) {
+              usePlayerStore.getState().setBuffering(false);
               pendingPauseRef.current = false;
-              // Two-way sync: if YouTube paused on its own (e.g. focus loss)
-              // but the store still thinks we're playing, align the store.
               if (storeIsPlaying) {
                 pause();
               }
             }
 
             if (event.data === YT.ENDED) {
+              usePlayerStore.getState().setBuffering(false);
               pendingPauseRef.current = false;
               next();
             }
@@ -207,6 +213,14 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
     
     return () => clearInterval(interval);
   }, [player, isPlaying, videoId]);
+
+  // Apply YouTube playback quality when player or quality setting changes
+  const playbackQuality = useSettingsStore((state) => state.playbackQuality);
+  useEffect(() => {
+    if (player && typeof player.setPlaybackQuality === "function") {
+      player.setPlaybackQuality(playbackQuality);
+    }
+  }, [player, playbackQuality]);
 
   return { containerRef };
 }

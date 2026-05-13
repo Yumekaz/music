@@ -1,13 +1,15 @@
-import { Heart, ListMusic, Plus, Search, Volume2 } from "lucide-react";
+import { Heart, ListMusic, Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
+import { PlayingBars } from "../common/PlayingBars.jsx";
 
 export function SidebarLibrary() {
   const { likedTracks, playlists, hydrated, hydrate, savePlaylist } = useLibraryStore();
   const currentTrack = usePlayerStore((state) => state.currentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
+  const isBuffering = usePlayerStore((state) => state.isBuffering);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -101,7 +103,7 @@ export function SidebarLibrary() {
               </span>
             </div>
             {isPlayingLiked && (
-              <Volume2 size={16} className="lib-playing-icon" />
+              <PlayingBars isPlaying={isPlaying} isBuffering={isBuffering} />
             )}
           </NavLink>
         )}
@@ -140,7 +142,7 @@ export function SidebarLibrary() {
                 </span>
               </div>
               {isPlayingHere && (
-                <Volume2 size={16} className="lib-playing-icon" />
+                <PlayingBars isPlaying={isPlaying} isBuffering={isBuffering} />
               )}
             </NavLink>
           );

@@ -5,6 +5,7 @@ export const usePlayerStore = create((set, get) => ({
   currentTrack: null,
   sourceType: "youtube",
   isPlaying: false,
+  isBuffering: false,
   positionMs: 0,
   durationMs: 0,
   seekTarget: null,
@@ -32,11 +33,25 @@ export const usePlayerStore = create((set, get) => ({
   setSeekTarget: (seekTarget) => set({ seekTarget }),
   setDuration: (durationMs) => set({ durationMs }),
   setVolume: (volume) => set({ volume }),
+  setBuffering: (isBuffering) => set({ isBuffering }),
+
   setQueue: (queue) => set({ queue }),
   addToQueue: (track) =>
     set((state) => {
       if (state.queue.some((t) => t.id === track.id)) return state;
       return { queue: [...state.queue, track] };
+    }),
+  // Insert track immediately after the currently playing track in the queue
+  playNext: (track) =>
+    set((state) => {
+      const idx = state.queue.findIndex((t) => t.id === state.currentTrack?.id);
+      const newQueue = [...state.queue];
+      if (idx === -1) {
+        newQueue.unshift(track);
+      } else {
+        newQueue.splice(idx + 1, 0, track);
+      }
+      return { queue: newQueue };
     }),
   removeFromQueue: (trackId) =>
     set((state) => ({ queue: state.queue.filter((t) => t.id !== trackId) })),

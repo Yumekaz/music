@@ -1,9 +1,21 @@
 import { useEffect, useRef } from "react";
-import { getDirectAudioElement, loadDirectAudio } from "../lib/directAudio.js";
+import { getDirectAudioElement, loadDirectAudio, fadeOutAndSwap } from "../lib/directAudio.js";
+import { useSettingsStore } from "../store/settingsStore.js";
 
 export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpdate, onEnded }) {
   const audioRef = useRef(getDirectAudioElement());
   const isDirect = sourceType === "preview" || sourceType === "jamendo";
+
+  // Stable refs so track-change effect doesn't re-run on every render
+  const isPlayingRef = useRef(isPlaying);
+  const crossfadeDurationRef = useRef(useSettingsStore.getState().crossfadeDuration);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => {
+    return useSettingsStore.subscribe(
+      (state) => state.crossfadeDuration,
+      (v) => { crossfadeDurationRef.current = v; }
+    );
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -11,13 +23,20 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
     audio.volume = volume;
   }, [volume]);
 
+  // Track change: use crossfade when playing, plain load when paused
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !isDirect || !track) return;
 
-    loadDirectAudio(track, sourceType);
+    if (isPlayingRef.current && crossfadeDurationRef.current > 0) {
+      fadeOutAndSwap(track, sourceType, crossfadeDurationRef.current);
+    } else {
+      loadDirectAudio(track, sourceType);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirect, sourceType, track]);
 
+  // Play / pause
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !isDirect) return;
@@ -29,6 +48,7 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
     }
   }, [isDirect, isPlaying]);
 
+  // Event listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
