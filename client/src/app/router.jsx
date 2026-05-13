@@ -11,6 +11,7 @@ const Album = lazy(() => import("../pages/Album.jsx"));
 const Library = lazy(() => import("../pages/Library.jsx"));
 const Playlist = lazy(() => import("../pages/Playlist.jsx"));
 const Track = lazy(() => import("../pages/Track.jsx"));
+const Settings = lazy(() => import("../pages/Settings.jsx"));
 
 function Page({ children }) {
   return <Suspense fallback={<LoadingSkeleton label="Loading view" />}>{children}</Suspense>;
@@ -28,7 +29,8 @@ export const router = createBrowserRouter([
       { path: "albums/:id", element: <Page><Album /></Page> },
       { path: "tracks/:id", element: <Page><Track /></Page> },
       { path: "library", element: <Page><Library /></Page> },
-      { path: "playlists/:id", element: <Page><Playlist /></Page> }
+      { path: "playlists/:id", element: <Page><Playlist /></Page> },
+      { path: "settings", element: <Page><Settings /></Page> }
     ]
   }
 ]);

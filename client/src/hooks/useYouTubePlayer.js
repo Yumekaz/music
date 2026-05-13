@@ -31,9 +31,13 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
   const seekTarget = usePlayerStore((state) => state.seekTarget);
 
   // Tracks whether a pause was requested while YouTube was still buffering.
-  // pauseVideo() is silently ignored by the IFrame API during BUFFERING (state 3),
-  // so we persist the intent here and honour it the moment PLAYING fires.
   const pendingPauseRef = useRef(false);
+
+  // Track the videoId that the player was initialised with so the videoId
+  // effect can skip its first run (the constructor already loaded it).
+  const initialVideoIdRef = useRef(videoId);
+  // Track the currently-loaded video so we only crossfade on actual changes.
+  const loadedVideoIdRef = useRef(null);
 
   // Create the player once
   useEffect(() => {
@@ -47,9 +51,11 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
     
     loadYouTubeAPI().then(() => {
       if (!isMounted) return;
+
+      const initVideoId = initialVideoIdRef.current || "";
       
       ytPlayer = new window.YT.Player(mount, {
-        videoId: videoId || "",
+        videoId: initVideoId,
         playerVars: {
           autoplay: isPlaying ? 1 : 0,
           controls: 0,
@@ -64,12 +70,14 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
         events: {
           onReady: (event) => {
             if (isMounted) {
+              // Mark the initial video as loaded so the videoId effect
+              // won't try to crossfade-reload the same video.
+              loadedVideoIdRef.current = initVideoId || null;
               setPlayer(event.target);
+
               if (usePlayerStore.getState().isPlaying) {
                 event.target.playVideo();
               } else {
-                // Player may have auto-started via playerVars.autoplay=1 set at
-                // mount time — make sure we honour whatever the store says now.
                 pendingPauseRef.current = true;
               }
             }
@@ -80,7 +88,6 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
 
             if (event.data === YT.BUFFERING) {
               usePlayerStore.getState().setBuffering(true);
-              // pauseVideo() is a no-op during buffering — record the intent instead.
               if (!storeIsPlaying) {
                 pendingPauseRef.current = true;
               }
@@ -88,7 +95,6 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
 
             if (event.data === YT.PLAYING) {
               usePlayerStore.getState().setBuffering(false);
-              // Populate available qualities once the video starts
               try {
                 const qualities = event.target.getAvailableQualityLevels?.() || [];
                 if (qualities.length) {
@@ -131,47 +137,66 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once to mount the iframe
 
-  // Handle videoId change — cross-fade: fade out current, load new, fade in
+  // Handle videoId change.
+  // Skip if the video is the same one we already loaded (including the
+  // initial video from the constructor). Only crossfade when switching.
   useEffect(() => {
-    if (player && typeof player.loadVideoById === "function") {
-      if (videoId) {
-        // Cross-fade out
-        const currentVol = typeof player.getVolume === "function" ? player.getVolume() : 100;
-        const steps = 8;
-        const stepMs = 100;
-        let step = 0;
+    if (!player || typeof player.loadVideoById !== "function") return;
 
-        const fadeOut = setInterval(() => {
-          step++;
-          if (typeof player.setVolume === "function") {
-            player.setVolume(Math.max(0, currentVol * (1 - step / steps)));
-          }
-          if (step >= steps) {
-            clearInterval(fadeOut);
-            player.stopVideo();
-            
-            // If isPlaying is true, load and play; if false, just cue (load thumbnail/info)
-            if (isPlaying) {
-              player.loadVideoById(videoId);
-            } else {
-              player.cueVideoById(videoId);
-            }
-
-            // Fade back in
-            let inStep = 0;
-            const fadeIn = setInterval(() => {
-              inStep++;
-              if (typeof player.setVolume === "function") {
-                player.setVolume(Math.min(currentVol, currentVol * (inStep / steps)));
-              }
-              if (inStep >= steps) clearInterval(fadeIn);
-            }, stepMs);
-          }
-        }, stepMs);
-      } else {
-        player.stopVideo();
-      }
+    if (!videoId) {
+      player.stopVideo();
+      loadedVideoIdRef.current = null;
+      return;
     }
+
+    // Skip if this is the same video that's already loaded
+    if (videoId === loadedVideoIdRef.current) return;
+
+    const hadPreviousVideo = loadedVideoIdRef.current !== null;
+    loadedVideoIdRef.current = videoId;
+
+    if (!hadPreviousVideo) {
+      // First video after an empty state — load directly
+      if (isPlaying) {
+        player.loadVideoById(videoId);
+      } else {
+        player.cueVideoById(videoId);
+      }
+      return;
+    }
+
+    // Switching videos — crossfade: fade out → stop → load new → fade in
+    const currentVol = typeof player.getVolume === "function" ? player.getVolume() : 100;
+    const steps = 8;
+    const stepMs = 100;
+    let step = 0;
+
+    const fadeOut = setInterval(() => {
+      step++;
+      if (typeof player.setVolume === "function") {
+        player.setVolume(Math.max(0, currentVol * (1 - step / steps)));
+      }
+      if (step >= steps) {
+        clearInterval(fadeOut);
+        player.stopVideo();
+        
+        if (isPlaying) {
+          player.loadVideoById(videoId);
+        } else {
+          player.cueVideoById(videoId);
+        }
+
+        // Fade back in
+        let inStep = 0;
+        const fadeIn = setInterval(() => {
+          inStep++;
+          if (typeof player.setVolume === "function") {
+            player.setVolume(Math.min(currentVol, currentVol * (inStep / steps)));
+          }
+          if (inStep >= steps) clearInterval(fadeIn);
+        }, stepMs);
+      }
+    }, stepMs);
   }, [player, videoId]);
 
   // Handle isPlaying change
@@ -181,9 +206,6 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
         pendingPauseRef.current = false;
         player.playVideo();
       } else {
-        // Always record the intent. If the player is in BUFFERING state,
-        // pauseVideo() will be ignored by YouTube — pendingPauseRef ensures
-        // we pause the moment PLAYING fires.
         pendingPauseRef.current = true;
         player.pauseVideo();
       }

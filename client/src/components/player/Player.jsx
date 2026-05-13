@@ -1,7 +1,6 @@
-import { Disc3, Heart, ListMusic, Tv2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Disc3, Heart, ListMusic } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Equalizer } from "../equalizer/Equalizer.jsx";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { useToast } from "../common/ToastProvider.jsx";
 import { useDirectAudio } from "../../hooks/useDirectAudio.js";
@@ -9,45 +8,16 @@ import { pauseDirectAudio, playDirectAudio } from "../../lib/directAudio.js";
 import { isDirectAudioSource } from "../../lib/resolvers.js";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
-import { useSettingsStore } from "../../store/settingsStore.js";
 import { PlayerControls } from "./PlayerControls.jsx";
 import { ProgressBar } from "./ProgressBar.jsx";
 import { VolumeControl } from "./VolumeControl.jsx";
 import { YouTubeEmbed } from "./YouTubeEmbed.jsx";
 import { QueuePanel } from "./QueuePanel.jsx";
 
-const QUALITY_LABELS = {
-  default: "Auto",
-  small: "240p",
-  medium: "360p",
-  large: "480p",
-  hd720: "720p",
-  hd1080: "1080p",
-  highres: "4K",
-};
-
 export function Player({ online }) {
   const navigate = useNavigate();
   const showToast = useToast();
   const [queueOpen, setQueueOpen] = useState(false);
-  const [qualityOpen, setQualityOpen] = useState(false);
-  const qualityRef = useRef(null);
-
-  const playbackQuality = useSettingsStore((state) => state.playbackQuality);
-  const availableQualities = useSettingsStore((state) => state.youtubeAvailableQualities);
-  const setPlaybackQuality = useSettingsStore((state) => state.setPlaybackQuality);
-
-  // Close quality picker on outside click
-  useEffect(() => {
-    if (!qualityOpen) return;
-    function handleClick(e) {
-      if (qualityRef.current && !qualityRef.current.contains(e.target)) {
-        setQualityOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [qualityOpen]);
 
   const {
     currentTrack,
@@ -210,43 +180,6 @@ export function Player({ online }) {
           >
             <ListMusic size={18} />
           </button>
-          {sourceType === "youtube" && (
-            <div className="quality-picker-wrap" ref={qualityRef}>
-              <button
-                type="button"
-                className={`icon-button icon-button--small quality-btn ${qualityOpen ? "active" : ""}`}
-                onClick={() => setQualityOpen(!qualityOpen)}
-                aria-label="Video quality"
-                title="Video quality"
-              >
-                <Tv2 size={18} />
-              </button>
-              {qualityOpen && (
-                <div className="quality-menu" role="menu">
-                  <div className="quality-menu-label">Quality</div>
-                  {(availableQualities.length
-                    ? ["default", ...availableQualities.filter((q) => q !== "auto" && QUALITY_LABELS[q])]
-                    : Object.keys(QUALITY_LABELS)
-                  ).map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      role="menuitem"
-                      className={`quality-menu-item ${playbackQuality === q ? "active" : ""}`}
-                      onClick={() => {
-                        setPlaybackQuality(q);
-                        setQualityOpen(false);
-                      }}
-                    >
-                      {QUALITY_LABELS[q] || q}
-                      {playbackQuality === q && <span className="quality-check">✓</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <Equalizer audioRef={audioRef} enabled={directEnabled} />
         </div>
       </footer>
       <QueuePanel open={queueOpen} onClose={() => setQueueOpen(false)} />

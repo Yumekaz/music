@@ -1,5 +1,5 @@
 import { Outlet, useLocation, NavLink } from "react-router-dom";
-import { Home, Library, Search } from "lucide-react";
+import { Home, Library, Search, Settings } from "lucide-react";
 import { OfflineBanner } from "./OfflineBanner.jsx";
 import { Sidebar } from "../sidebar/Sidebar.jsx";
 import { Player } from "../player/Player.jsx";
@@ -36,6 +36,10 @@ export function AppShell() {
           <NavLink to="/library" className={({ isActive }) => isActive ? "active" : ""}>
             <Library size={20} />
             <span>Library</span>
+          </NavLink>
+          <NavLink to="/settings" className={({ isActive }) => isActive ? "active" : ""}>
+            <Settings size={20} />
+            <span>Settings</span>
           </NavLink>
         </nav>
       </div>
