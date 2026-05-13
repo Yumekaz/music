@@ -29,6 +29,11 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
   const [player, setPlayer] = useState(null);
   const seekTarget = usePlayerStore((state) => state.seekTarget);
 
+  // Tracks whether a pause was requested while YouTube was still buffering.
+  // pauseVideo() is silently ignored by the IFrame API during BUFFERING (state 3),
+  // so we persist the intent here and honour it the moment PLAYING fires.
+  const pendingPauseRef = useRef(false);
+
   // Create the player once
   useEffect(() => {
     let isMounted = true;
@@ -61,12 +66,48 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
               setPlayer(event.target);
               if (usePlayerStore.getState().isPlaying) {
                 event.target.playVideo();
+              } else {
+                // Player may have auto-started via playerVars.autoplay=1 set at
+                // mount time — make sure we honour whatever the store says now.
+                pendingPauseRef.current = true;
               }
             }
           },
           onStateChange: (event) => {
-            if (event.data === window.YT.PlayerState.ENDED) {
-              usePlayerStore.getState().next();
+            const { isPlaying: storeIsPlaying, next, pause } = usePlayerStore.getState();
+            const YT = window.YT.PlayerState;
+
+            if (event.data === YT.BUFFERING) {
+              // pauseVideo() is a no-op during buffering — record the intent instead.
+              if (!storeIsPlaying) {
+                pendingPauseRef.current = true;
+              }
+            }
+
+            if (event.data === YT.PLAYING) {
+              // Two reasons we may need to pause immediately after PLAYING fires:
+              // 1. A pause was requested while the video was still buffering.
+              // 2. Store is paused but YouTube auto-resumed (e.g. after a seek).
+              if (pendingPauseRef.current || !storeIsPlaying) {
+                pendingPauseRef.current = false;
+                // Defer by one tick — calling pauseVideo() synchronously inside
+                // onStateChange can be ignored by some browsers/YT versions.
+                setTimeout(() => event.target.pauseVideo(), 0);
+              }
+            }
+
+            if (event.data === YT.PAUSED) {
+              pendingPauseRef.current = false;
+              // Two-way sync: if YouTube paused on its own (e.g. focus loss)
+              // but the store still thinks we're playing, align the store.
+              if (storeIsPlaying) {
+                pause();
+              }
+            }
+
+            if (event.data === YT.ENDED) {
+              pendingPauseRef.current = false;
+              next();
             }
           }
         }
@@ -102,7 +143,14 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
           if (step >= steps) {
             clearInterval(fadeOut);
             player.stopVideo();
-            player.loadVideoById(videoId);
+            
+            // If isPlaying is true, load and play; if false, just cue (load thumbnail/info)
+            if (isPlaying) {
+              player.loadVideoById(videoId);
+            } else {
+              player.cueVideoById(videoId);
+            }
+
             // Fade back in
             let inStep = 0;
             const fadeIn = setInterval(() => {
@@ -112,11 +160,6 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
               }
               if (inStep >= steps) clearInterval(fadeIn);
             }, stepMs);
-            if (!isPlaying) {
-              setTimeout(() => {
-                if (typeof player.pauseVideo === "function") player.pauseVideo();
-              }, 300);
-            }
           }
         }, stepMs);
       } else {
@@ -129,8 +172,13 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
   useEffect(() => {
     if (player && typeof player.playVideo === "function") {
       if (isPlaying) {
+        pendingPauseRef.current = false;
         player.playVideo();
       } else {
+        // Always record the intent. If the player is in BUFFERING state,
+        // pauseVideo() will be ignored by YouTube — pendingPauseRef ensures
+        // we pause the moment PLAYING fires.
+        pendingPauseRef.current = true;
         player.pauseVideo();
       }
     }
