@@ -1,5 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePlayerStore } from "./playerStore.js";
+
+vi.mock("../lib/directAudio.js", () => ({
+  playDirectAudio: vi.fn(() => Promise.resolve(true))
+}));
 
 const track = {
   id: "track-blinding-lights",
@@ -24,6 +28,13 @@ describe("playerStore", () => {
     usePlayerStore.getState().playTrack(track, "preview");
 
     expect(usePlayerStore.getState().currentTrack.id).toBe(track.id);
+    expect(usePlayerStore.getState().sourceType).toBe("preview");
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+  });
+
+  it("uses direct preview playback when a youtube track has a playable preview", () => {
+    usePlayerStore.getState().playTrack({ ...track, previewUrl: "/api/audio/preview/track-blinding-lights" }, "youtube");
+
     expect(usePlayerStore.getState().sourceType).toBe("preview");
     expect(usePlayerStore.getState().isPlaying).toBe(true);
   });

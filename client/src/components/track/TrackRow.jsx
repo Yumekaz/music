@@ -1,9 +1,8 @@
-import { Heart, Play, Radio } from "lucide-react";
+import { Heart, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { ProviderBadge } from "../common/ProviderBadge.jsx";
 import { TrackMenu } from "./TrackMenu.jsx";
-import { playDirectAudio } from "../../lib/directAudio.js";
 import { formatDuration } from "../../lib/formatters.js";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
@@ -15,9 +14,6 @@ export function TrackRow({ track, compact = false }) {
   const toggleLike = useLibraryStore((state) => state.toggleLike);
 
   function startPlayback(sourceType = "youtube") {
-    if (sourceType === "preview" || sourceType === "jamendo") {
-      playDirectAudio(track, sourceType).catch(() => {});
-    }
     playTrack(track, sourceType);
   }
 

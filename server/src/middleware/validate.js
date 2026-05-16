@@ -19,6 +19,7 @@ export function notFound(_request, response) {
 }
 
 export function errorHandler(error, _request, response, _next) {
+  console.error("ErrorHandler caught:", error);
   response.status(error.status || 500).json({
     error: error.message || "Internal server error"
   });

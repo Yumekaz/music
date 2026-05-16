@@ -1162,6 +1162,18 @@ h2 {
 .player-media {
   width: 92px;
   min-width: 92px;
+  height: 92px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.player-media .mini-youtube {
+  width: 200px;
+  height: 200px;
+  min-width: 200px;
+  min-height: 200px;
+  transform: scale(0.46);
+  transform-origin: top left;
 }
 
 .mini-empty {

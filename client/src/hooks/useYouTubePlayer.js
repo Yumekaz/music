@@ -3,7 +3,7 @@ import { usePlayerStore } from "../store/playerStore.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 
 function loadYouTubeAPI() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (window.YT && window.YT.Player) {
       resolve();
       return;
@@ -14,6 +14,7 @@ function loadYouTubeAPI() {
       const script = document.createElement("script");
       script.id = "youtube-api-script";
       script.src = "https://www.youtube.com/iframe_api";
+      script.onerror = () => reject(new Error("Unable to load YouTube iframe API"));
       document.head.appendChild(script);
     }
 
@@ -65,7 +66,8 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
           modestbranding: 1,
           rel: 0,
           iv_load_policy: 3,
-          playsinline: 1
+          playsinline: 1,
+          origin: window.location.origin
         },
         events: {
           onReady: (event) => {
@@ -121,9 +123,18 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
               pendingPauseRef.current = false;
               next();
             }
+          },
+          onError: () => {
+            usePlayerStore.getState().setBuffering(false);
+            pendingPauseRef.current = false;
+            usePlayerStore.getState().pause();
           }
         }
       });
+    }).catch(() => {
+      if (!isMounted) return;
+      usePlayerStore.getState().setBuffering(false);
+      usePlayerStore.getState().pause();
     });
     
     return () => {
@@ -150,7 +161,9 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
     }
 
     // Skip if this is the same video that's already loaded
-    if (videoId === loadedVideoIdRef.current) return;
+    if (videoId === loadedVideoIdRef.current) {
+      return;
+    }
 
     const hadPreviousVideo = loadedVideoIdRef.current !== null;
     loadedVideoIdRef.current = videoId;

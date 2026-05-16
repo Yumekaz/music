@@ -22,7 +22,8 @@ export async function fetchJson(url, options = {}) {
 export async function safeFetchJson(url, options = {}) {
   try {
     return await fetchJson(url, options);
-  } catch {
+  } catch (error) {
+    console.error("safeFetchJson failed for URL:", url, error);
     return null;
   }
 }

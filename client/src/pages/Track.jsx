@@ -5,7 +5,6 @@ import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { LoadingSkeleton } from "../components/common/LoadingSkeleton.jsx";
 import { LyricsPanel } from "../components/lyrics/LyricsPanel.jsx";
 import { ProviderBadge } from "../components/common/ProviderBadge.jsx";
-import { playDirectAudio } from "../lib/directAudio.js";
 import { getTrack } from "../services/tracks.js";
 import { usePlayerStore } from "../store/playerStore.js";
 
@@ -19,9 +18,6 @@ export default function Track() {
   if (!track.data) return <p className="empty-state">Track not found.</p>;
 
   function startPlayback(sourceType = "youtube") {
-    if (sourceType === "preview" || sourceType === "jamendo") {
-      playDirectAudio(track.data, sourceType).catch(() => {});
-    }
     playTrack(track.data, sourceType);
   }
 

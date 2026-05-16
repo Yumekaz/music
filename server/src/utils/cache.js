@@ -35,7 +35,11 @@ function writeMemory(key, value, ttlSeconds) {
 
 export async function getCached(key) {
   if (redis) {
-    return redis.get(key);
+    try {
+      return await redis.get(key);
+    } catch (error) {
+      console.warn("Redis get error, falling back to memory:", error.message);
+    }
   }
 
   return readMemory(key);
@@ -43,8 +47,12 @@ export async function getCached(key) {
 
 export async function setCached(key, value, ttlSeconds) {
   if (redis) {
-    await redis.set(key, value, { ex: ttlSeconds });
-    return;
+    try {
+      await redis.set(key, value, { ex: ttlSeconds });
+      return;
+    } catch (error) {
+      console.warn("Redis set error, falling back to memory:", error.message);
+    }
   }
 
   writeMemory(key, value, ttlSeconds);

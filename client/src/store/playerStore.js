@@ -1,5 +1,15 @@
 import { create } from "zustand";
+import { playDirectAudio } from "../lib/directAudio.js";
 import { getRecommendations } from "../services/search.js";
+
+function resolveSourceType(track, sourceType) {
+  if (sourceType === "youtube" && !track?.videoId && track?.previewUrl) return "preview";
+  return sourceType;
+}
+
+function isDirectSource(sourceType) {
+  return sourceType === "preview" || sourceType === "jamendo";
+}
 
 export const usePlayerStore = create((set, get) => ({
   currentTrack: null,
@@ -14,14 +24,21 @@ export const usePlayerStore = create((set, get) => ({
   shuffle: false,
   repeat: "off", // "off" | "all" | "one"
 
-  playTrack: (track, sourceType = "youtube") =>
+  playTrack: (track, sourceType = "youtube") => {
+    const resolvedSourceType = resolveSourceType(track, sourceType);
+
+    if (isDirectSource(resolvedSourceType)) {
+      playDirectAudio(track, resolvedSourceType).catch(() => {});
+    }
+
     set({
       currentTrack: track,
-      sourceType,
+      sourceType: resolvedSourceType,
       isPlaying: true,
       positionMs: 0,
       durationMs: track?.durationMs || 0
-    }),
+    });
+  },
   pause: () => set({ isPlaying: false }),
   resume: () => set(({ currentTrack }) => ({ isPlaying: Boolean(currentTrack) })),
   togglePlay: () => {
