@@ -13,11 +13,14 @@ import { ProgressBar } from "./ProgressBar.jsx";
 import { VolumeControl } from "./VolumeControl.jsx";
 import { YouTubeEmbed } from "./YouTubeEmbed.jsx";
 import { QueuePanel } from "./QueuePanel.jsx";
+import { useMediaSession } from "../../hooks/useMediaSession.js";
 
 export function Player({ online }) {
   const navigate = useNavigate();
   const showToast = useToast();
   const [queueOpen, setQueueOpen] = useState(false);
+
+  useMediaSession();
 
   const {
     currentTrack,

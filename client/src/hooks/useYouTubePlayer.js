@@ -40,6 +40,9 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
   // Track the currently-loaded video so we only crossfade on actual changes.
   const loadedVideoIdRef = useRef(null);
 
+  // Store fetched SponsorBlock segments
+  const sponsorSegmentsRef = useRef([]);
+
   // Create the player once
   useEffect(() => {
     let isMounted = true;
@@ -233,21 +236,67 @@ export function useYouTubePlayer({ videoId, isPlaying }) {
     }
   }, [player, seekTarget]);
 
-  // Poll time updates
+  // Poll time updates and handle SponsorBlock skipping
   useEffect(() => {
     if (!player || !isPlaying || !videoId) return;
     
     const interval = setInterval(() => {
       if (typeof player.getCurrentTime === "function") {
-        const time = player.getCurrentTime() * 1000;
-        const dur = player.getDuration() * 1000;
-        if (time > 0) usePlayerStore.getState().setPosition(time);
-        if (dur > 0) usePlayerStore.getState().setDuration(dur);
+        const timeSec = player.getCurrentTime();
+        const timeMs = timeSec * 1000;
+        const durMs = player.getDuration() * 1000;
+        
+        // SponsorBlock skipping logic
+        const segments = sponsorSegmentsRef.current;
+        if (segments && segments.length > 0) {
+          for (const seg of segments) {
+            // If current time is within a skip segment, seek to its end
+            if (timeSec >= seg.segment[0] && timeSec < seg.segment[1]) {
+              player.seekTo(seg.segment[1], true);
+              return; // Skip further updates this tick
+            }
+          }
+        }
+
+        if (timeMs > 0) usePlayerStore.getState().setPosition(timeMs);
+        if (durMs > 0) usePlayerStore.getState().setDuration(durMs);
       }
     }, 500);
     
     return () => clearInterval(interval);
   }, [player, isPlaying, videoId]);
+
+  // Fetch SponsorBlock segments
+  useEffect(() => {
+    if (!videoId) {
+      sponsorSegmentsRef.current = [];
+      return;
+    }
+
+    let isMounted = true;
+    sponsorSegmentsRef.current = [];
+
+    const fetchSponsorBlock = async () => {
+      try {
+        const url = `https://sponsor.ajay.app/api/skipSegments?videoID=${videoId}&categories=["music_offtopic"]`;
+        const response = await fetch(url);
+        if (!response.ok) return; // 404 means no segments found, ignore gracefully
+        
+        const data = await response.json();
+        if (isMounted && Array.isArray(data)) {
+          sponsorSegmentsRef.current = data;
+        }
+      } catch (err) {
+        // Ignore network errors or ad-blocker blocking the request
+      }
+    };
+
+    fetchSponsorBlock();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [videoId]);
 
   // Apply YouTube playback quality when player or quality setting changes
   const playbackQuality = useSettingsStore((state) => state.playbackQuality);
