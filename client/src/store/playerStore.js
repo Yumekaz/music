@@ -24,6 +24,22 @@ export const usePlayerStore = create((set, get) => ({
   shuffle: false,
   repeat: "off", // "off" | "all" | "one"
 
+  getNextTrack: () => {
+    const { queue, currentTrack, shuffle, repeat } = get();
+    if (repeat === "one") return currentTrack;
+    if (!queue.length) return null;
+
+    const index = queue.findIndex((track) => track.id === currentTrack?.id);
+    if (shuffle) return null; // Can't reliably pre-buffer random track
+
+    const nextIndex = index + 1;
+    if (nextIndex >= queue.length) {
+      if (repeat === "all") return queue[0];
+      return null;
+    }
+    return queue[nextIndex];
+  },
+
   playTrack: (track, sourceType = "youtube") => {
     const resolvedSourceType = resolveSourceType(track, sourceType);
 

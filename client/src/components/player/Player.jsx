@@ -36,7 +36,8 @@ export function Player({ online }) {
     setDuration,
     setVolume,
     next,
-    previous
+    previous,
+    getNextTrack
   } = usePlayerStore();
 
   const isLiked = useLibraryStore((state) => currentTrack ? state.isLiked(currentTrack.id) : false);
@@ -125,7 +126,12 @@ export function Player({ online }) {
       <footer className="player-bar" aria-label="Persistent player">
         <div className="player-media" onClick={() => currentTrack && navigate("/now-playing")} role="button" tabIndex={0}>
           {currentTrack && sourceType === "youtube" ? (
-            <YouTubeEmbed track={currentTrack} isPlaying={online && isPlaying} className="mini-youtube" />
+            <YouTubeEmbed 
+              track={currentTrack} 
+              nextVideoId={getNextTrack()?.videoId}
+              isPlaying={online && isPlaying} 
+              className="mini-youtube" 
+            />
           ) : currentTrack ? (
             <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className="mini-artwork" />
           ) : (

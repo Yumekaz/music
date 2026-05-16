@@ -1080,14 +1080,38 @@ h2 {
   top: 28px;
 }
 
+.youtube-frame-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #101510;
+}
+
 .youtube-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   min-width: 200px;
   min-height: 200px;
-  overflow: hidden;
+  height: 100%;
   border-radius: 8px;
   background: #101510;
   border: 1px solid #242c24;
+  transition: opacity 0.2s ease;
+}
+
+.youtube-frame.standby {
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.youtube-frame.active {
+  opacity: 1;
+  z-index: 2;
 }
 
 .youtube-frame iframe {
