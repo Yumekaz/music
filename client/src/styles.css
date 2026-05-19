@@ -2760,9 +2760,7 @@ input[type="range"] {
 }
 
 /* Ensure layouts sit above backdrop */
-.sidebar,
-.main-surface,
-.player-bar {
+.main-surface {
   position: relative;
   z-index: 10;
 }
