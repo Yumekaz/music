@@ -47,7 +47,7 @@ export function pauseDirectAudio() {
  * fade out current → hard-cut to new src → fade in.
  * Each phase takes durationSecs/2. Falls back to hard cut if durationSecs <= 0.
  */
-export function fadeOutAndSwap(track, sourceType, durationSecs) {
+export function fadeOutAndSwap(track, sourceType, durationSecs, targetVolume) {
   const audio = getDirectAudioElement();
   if (!audio) return;
 
@@ -61,13 +61,16 @@ export function fadeOutAndSwap(track, sourceType, durationSecs) {
 
   // Hard cut if crossfade is disabled or audio isn't playing
   if (durationSecs <= 0 || audio.paused) {
+    if (typeof targetVolume === "number") {
+      audio.volume = targetVolume;
+    }
     audio.src = src;
     audio.load();
     audio.play().catch(() => {});
     return;
   }
 
-  const startVol = audio.volume;
+  const startVol = typeof targetVolume === "number" ? targetVolume : audio.volume;
   const STEPS = 20;
   const stepMs = (durationSecs * 500) / STEPS; // half duration for fade out
   let step = 0;

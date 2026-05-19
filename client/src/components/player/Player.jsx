@@ -14,6 +14,7 @@ import { VolumeControl } from "./VolumeControl.jsx";
 import { YouTubeEmbed } from "./YouTubeEmbed.jsx";
 import { QueuePanel } from "./QueuePanel.jsx";
 import { useMediaSession } from "../../hooks/useMediaSession.js";
+import { resolveTrack } from "../../services/tracks.js";
 
 export function Player({ online }) {
   const navigate = useNavigate();
@@ -72,12 +73,11 @@ export function Player({ online }) {
 
   useEffect(() => {
     if (currentTrack && sourceType === "youtube" && !currentTrack.videoId) {
-      const title = encodeURIComponent(currentTrack.title || "");
-      const artist = encodeURIComponent(currentTrack.artistName || currentTrack.artist || "");
+      const title = currentTrack.title || "";
+      const artist = currentTrack.artistName || currentTrack.artist || "";
       if (!title) return;
 
-      fetch(`/api/tracks/resolve?title=${title}&artist=${artist}`)
-        .then((res) => res.json())
+      resolveTrack(title, artist)
         .then((resolvedTrack) => {
           if (resolvedTrack && resolvedTrack.videoId) {
             usePlayerStore.setState((state) => {
@@ -88,7 +88,9 @@ export function Player({ online }) {
             });
           }
         })
-        .catch(console.error);
+        .catch((err) => {
+          console.warn("Failed to resolve track:", title, artist, err);
+        });
     }
   }, [currentTrack, sourceType]);
 
@@ -106,6 +108,9 @@ export function Player({ online }) {
       }
       try {
         await playDirectAudio(currentTrack, sourceType);
+      } catch (err) {
+        console.warn("Playback of direct audio failed:", err);
+        showToast?.("Could not play preview track.");
       } finally {
         resume();
       }

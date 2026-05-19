@@ -29,12 +29,12 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
     if (!audio || !isDirect || !track) return;
 
     if (isPlayingRef.current && crossfadeDurationRef.current > 0) {
-      fadeOutAndSwap(track, sourceType, crossfadeDurationRef.current);
+      fadeOutAndSwap(track, sourceType, crossfadeDurationRef.current, volume);
     } else {
       loadDirectAudio(track, sourceType);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDirect, sourceType, track]);
+  }, [isDirect, sourceType, track, volume]);
 
   // Play / pause
   useEffect(() => {

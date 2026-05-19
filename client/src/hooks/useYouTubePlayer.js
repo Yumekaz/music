@@ -62,6 +62,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
   const playerBVideoIdRef = useRef("");
 
   const seekTarget = usePlayerStore((state) => state.seekTarget);
+  const volume = usePlayerStore((state) => state.volume);
   const pendingPauseRef = useRef(false);
   const sponsorSegmentsRef = useRef([]);
 
@@ -312,6 +313,19 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
       activePlayer.setPlaybackQuality(playbackQuality);
     }
   }, [activePlayer, playbackQuality]);
+
+  // 9. Volume Synchronization
+  useEffect(() => {
+    if (playerA && typeof playerA.setVolume === "function") {
+      playerA.setVolume(volume * 100);
+    }
+  }, [playerA, volume]);
+
+  useEffect(() => {
+    if (playerB && typeof playerB.setVolume === "function") {
+      playerB.setVolume(volume * 100);
+    }
+  }, [playerB, volume]);
 
   return { containerARef, containerBRef, activePlayer: activePlayerId };
 }
