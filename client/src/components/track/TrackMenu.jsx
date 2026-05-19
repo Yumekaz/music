@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Heart, ListMusic, ListPlus, Play, MoreHorizontal, User, Disc3 } from "lucide-react";
+import { Heart, ListMusic, ListPlus, Play, MoreHorizontal, User, Disc3, Download, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
@@ -8,6 +8,7 @@ import { useToast } from "../common/ToastProvider.jsx";
 export function TrackMenu({ track }) {
   const [open, setOpen] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
   const showToast = useToast();
@@ -16,6 +17,9 @@ export function TrackMenu({ track }) {
   const isLiked = useLibraryStore((state) => state.isLiked(track.id));
   const toggleLike = useLibraryStore((state) => state.toggleLike);
   const addToPlaylist = useLibraryStore((state) => state.addToPlaylist);
+  const isDownloaded = useLibraryStore((state) => state.isDownloaded(track.id));
+  const downloadTrack = useLibraryStore((state) => state.downloadTrack);
+  const removeDownload = useLibraryStore((state) => state.removeDownload);
   const addToQueue = usePlayerStore((state) => state.addToQueue);
   const playNext = usePlayerStore((state) => state.playNext);
 
@@ -70,6 +74,27 @@ export function TrackMenu({ track }) {
     } else {
       const slug = (track.albumName || "").toLowerCase().replace(/\s+/g, "-");
       navigate(`/albums/${slug}`);
+    }
+  }
+
+  async function handleDownloadToggle() {
+    if (isDownloaded) {
+      try {
+        await removeDownload(track.id);
+        showToast?.("Removed offline download");
+      } catch (err) {
+        showToast?.("Failed to remove download");
+      }
+    } else {
+      setDownloading(true);
+      try {
+        await downloadTrack(track);
+        showToast?.("Downloaded track for offline play");
+      } catch (err) {
+        showToast?.("Failed to download track");
+      } finally {
+        setDownloading(false);
+      }
     }
     setOpen(false);
   }
@@ -130,6 +155,18 @@ export function TrackMenu({ track }) {
             <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
             <span>{isLiked ? "Remove from Liked" : "Like"}</span>
           </button>
+
+          {(track.jamendoUrl || track.previewUrl) && (
+            <button
+              type="button"
+              className="track-menu-item"
+              onClick={handleDownloadToggle}
+              disabled={downloading}
+            >
+              {isDownloaded ? <Trash2 size={16} /> : <Download size={16} />}
+              <span>{downloading ? "Downloading..." : isDownloaded ? "Remove download" : "Download offline"}</span>
+            </button>
+          )}
 
           <div className="track-menu-divider" />
 

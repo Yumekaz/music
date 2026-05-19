@@ -28,17 +28,23 @@ export function Equalizer({ audioRef, enabled }) {
       {!enabled ? <p className="eq-note">EQ applies to preview and Jamendo tracks.</p> : null}
       {equalizerOpen ? (
         <div className="eq-panel">
-          <div className="eq-presets" role="list" aria-label="Equalizer presets">
-            {Object.entries(EQUALIZER_PRESETS).map(([name, gains]) => (
-              <button
-                type="button"
-                key={name}
-                className={name === equalizerPreset ? "active" : ""}
-                onClick={() => setEqualizerPreset(name, gains)}
-              >
-                {name}
-              </button>
-            ))}
+          <div className="eq-presets-container">
+            <label htmlFor="eq-preset-select" className="eq-label">Preset:</label>
+            <select
+              id="eq-preset-select"
+              className="eq-select"
+              value={equalizerPreset}
+              onChange={(e) => {
+                const name = e.target.value;
+                setEqualizerPreset(name, EQUALIZER_PRESETS[name]);
+              }}
+            >
+              {Object.keys(EQUALIZER_PRESETS).map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="eq-bands">
             {bands.map((band, index) => (

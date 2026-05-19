@@ -1,4 +1,4 @@
-import { Heart, Play } from "lucide-react";
+import { Heart, Play, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { ProviderBadge } from "../common/ProviderBadge.jsx";
@@ -11,6 +11,7 @@ export function TrackRow({ track, compact = false }) {
   const playTrack = usePlayerStore((state) => state.playTrack);
   const setQueue = usePlayerStore((state) => state.setQueue);
   const isLiked = useLibraryStore((state) => state.isLiked(track.id));
+  const isDownloaded = useLibraryStore((state) => state.isDownloaded(track.id));
   const toggleLike = useLibraryStore((state) => state.toggleLike);
 
   function startPlayback(sourceType = "youtube") {
@@ -23,9 +24,12 @@ export function TrackRow({ track, compact = false }) {
     <article className={`track-row ${compact ? "compact" : ""}`}>
       <ImageWithFallback src={track.artworkUrl} alt={track.title} className="track-art" />
       <div className="track-main">
-        <button type="button" className="track-title" onClick={() => startPlayback("youtube")}>
-          {track.title}
-        </button>
+        <div className="track-title-row">
+          <button type="button" className="track-title" onClick={() => startPlayback("youtube")}>
+            {track.title}
+          </button>
+          {isDownloaded && <Download size={13} className="downloaded-indicator" title="Downloaded offline" />}
+        </div>
         <Link to={`/artists/lastfm-${artistSlug}`} className="track-subtitle">
           {track.artistName} {track.albumName ? `- ${track.albumName}` : ""}
         </Link>

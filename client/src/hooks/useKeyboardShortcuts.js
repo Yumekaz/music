@@ -57,6 +57,10 @@ export function useKeyboardShortcuts() {
             useLibraryStore.getState().toggleLike(state.currentTrack);
           }
           break;
+        case "Slash":
+          e.preventDefault();
+          state.toggleShortcutsHelp();
+          break;
         default:
           break;
       }

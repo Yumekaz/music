@@ -1,7 +1,7 @@
 import { openDB } from "idb";
 
 const DB_NAME = "music-app-v3";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 async function db() {
   return openDB(DB_NAME, DB_VERSION, {
@@ -14,6 +14,9 @@ async function db() {
       }
       if (!database.objectStoreNames.contains("playlists")) {
         database.createObjectStore("playlists", { keyPath: "id" });
+      }
+      if (!database.objectStoreNames.contains("downloads")) {
+        database.createObjectStore("downloads", { keyPath: "id" });
       }
     }
   });
@@ -53,4 +56,33 @@ export async function savePlaylist(playlist) {
 
 export async function deletePlaylist(id) {
   return (await db()).delete("playlists", id);
+}
+
+// ─── Offline Downloads Helper API ───
+
+export async function getDownload(id) {
+  return (await db()).get("downloads", id);
+}
+
+export async function putDownload(track, blob) {
+  return (await db()).put("downloads", {
+    id: track.id,
+    title: track.title,
+    artistName: track.artistName,
+    durationMs: track.durationMs,
+    artworkUrl: track.artworkUrl,
+    previewUrl: track.previewUrl,
+    jamendoUrl: track.jamendoUrl,
+    sourceType: track.sourceType || "preview",
+    blob,
+    downloadedAt: Date.now()
+  });
+}
+
+export async function deleteDownload(id) {
+  return (await db()).delete("downloads", id);
+}
+
+export async function listDownloads() {
+  return (await db()).getAll("downloads");
 }

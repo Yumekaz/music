@@ -23,6 +23,7 @@ export const usePlayerStore = create((set, get) => ({
   queue: [],
   shuffle: false,
   repeat: "off", // "off" | "all" | "one"
+  shortcutsHelpOpen: false,
 
   getNextTrack: () => {
     const { queue, currentTrack, shuffle, repeat } = get();
@@ -57,6 +58,8 @@ export const usePlayerStore = create((set, get) => ({
   },
   pause: () => set({ isPlaying: false }),
   resume: () => set(({ currentTrack }) => ({ isPlaying: Boolean(currentTrack) })),
+  toggleShortcutsHelp: () => set((state) => ({ shortcutsHelpOpen: !state.shortcutsHelpOpen })),
+  setShortcutsHelpOpen: (open) => set({ shortcutsHelpOpen: open }),
   togglePlay: () => {
     const { currentTrack, isPlaying } = get();
     set({ isPlaying: Boolean(currentTrack) && !isPlaying });

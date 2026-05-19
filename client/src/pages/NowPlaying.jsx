@@ -3,6 +3,7 @@ import { Equalizer } from "../components/equalizer/Equalizer.jsx";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { LyricsPanel } from "../components/lyrics/LyricsPanel.jsx";
 import { ProviderBadge } from "../components/common/ProviderBadge.jsx";
+import { Visualizer } from "../components/player/Visualizer.jsx";
 import { useColorExtract } from "../hooks/useColorExtract.js";
 import { useDirectAudio } from "../hooks/useDirectAudio.js";
 import { isDirectAudioSource } from "../lib/resolvers.js";
@@ -65,6 +66,7 @@ export default function NowPlaying() {
           <span>Open source</span>
         </a>
         <Equalizer audioRef={mirrorAudioRef} enabled={directEnabled} />
+        {directEnabled && <Visualizer />}
       </section>
       <LyricsPanel trackId={currentTrack.id} positionMs={positionMs} />
     </div>

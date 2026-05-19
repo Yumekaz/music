@@ -1,15 +1,22 @@
-import { Clock, Heart, Play, Shuffle } from "lucide-react";
-import { useEffect } from "react";
+import { Clock, Heart, Play, Shuffle, Sparkles, ArrowLeft, Loader2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { useLibraryStore } from "../store/libraryStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
+import { apiPost } from "../services/api.js";
+import { useToast } from "../components/common/ToastProvider.jsx";
 
 export default function Library() {
-  const { likedTracks, hydrate } = useLibraryStore();
+  const { likedTracks, hydrate, savePlaylist } = useLibraryStore();
   const playTrack = usePlayerStore((state) => state.playTrack);
   const setQueue = usePlayerStore((state) => state.setQueue);
   const currentTrack = usePlayerStore((state) => state.currentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
+  const showToast = useToast();
+
+  const [smartTracks, setSmartTracks] = useState([]);
+  const [generating, setGenerating] = useState(false);
+  const [smartTitle, setSmartTitle] = useState("Smart Mix");
 
   useEffect(() => {
     hydrate().catch(() => {});
@@ -28,8 +35,148 @@ export default function Library() {
     playTrack(shuffled[0], "youtube");
   }
 
+  async function generateSmartPlaylist() {
+    if (!likedTracks.length) {
+      showToast?.("Like some tracks first to seed recommendations!");
+      return;
+    }
+    setGenerating(true);
+    try {
+      const artists = [...new Set(likedTracks.map((t) => t.artistName).filter(Boolean))];
+      const seedArtists = artists.sort(() => Math.random() - 0.5).slice(0, 5);
+
+      const response = await apiPost("/discovery/recommendations", { artists: seedArtists });
+      const sections = response.sections || [];
+
+      const recTracks = [];
+      const seenIds = new Set();
+      sections.forEach((sec) => {
+        (sec.tracks || []).forEach((t) => {
+          if (!seenIds.has(t.id)) {
+            seenIds.add(t.id);
+            recTracks.push(t);
+          }
+        });
+      });
+
+      if (recTracks.length === 0) {
+        showToast?.("No recommendations found. Try liking more tracks!");
+      } else {
+        setSmartTracks(recTracks);
+        const seedStr = seedArtists.slice(0, 2).join(" & ");
+        setSmartTitle(seedStr ? `Mix: ${seedStr}` : "Smart Mix");
+        showToast?.("Generated custom smart playlist!");
+      }
+    } catch (err) {
+      showToast?.("Failed to generate smart playlist.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleSaveSmartPlaylist() {
+    if (!smartTracks.length) return;
+    try {
+      await savePlaylist({
+        id: `playlist-${Date.now()}`,
+        name: smartTitle,
+        tracks: smartTracks,
+        createdAt: Date.now()
+      });
+      showToast?.(`Saved "${smartTitle}" to library`);
+    } catch (err) {
+      showToast?.("Failed to save playlist.");
+    }
+  }
+
   const totalMs = likedTracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
   const totalMinutes = Math.round(totalMs / 60000);
+
+  if (smartTracks.length > 0) {
+    const totalSmartMs = smartTracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
+    const totalSmartMinutes = Math.round(totalSmartMs / 60000);
+
+    return (
+      <div className="page-stack">
+        <header className="liked-header">
+          <button type="button" className="icon-button back-to-library" onClick={() => setSmartTracks([])} aria-label="Go back">
+            <ArrowLeft size={22} />
+          </button>
+          <div className="liked-gradient-icon liked-gradient-icon--smart">
+            <Sparkles size={48} fill="white" />
+          </div>
+          <div className="liked-header-info">
+            <span className="liked-label">Smart Recommendations</span>
+            <h1 className="liked-title">{smartTitle}</h1>
+            <span className="liked-meta">
+              {smartTracks.length} tracks, about {totalSmartMinutes} min
+            </span>
+          </div>
+        </header>
+
+        <div className="liked-controls">
+          <button
+            type="button"
+            className="play-button play-button--large"
+            onClick={() => {
+              setQueue(smartTracks);
+              playTrack(smartTracks[0], "youtube");
+            }}
+            aria-label="Play all"
+          >
+            <Play size={24} fill="currentColor" />
+          </button>
+
+          <button
+            type="button"
+            className="utility-button"
+            onClick={handleSaveSmartPlaylist}
+            title="Save mix to Playlists"
+          >
+            <Plus size={16} />
+            <span>Save to Playlists</span>
+          </button>
+        </div>
+
+        <div className="numbered-track-list">
+          <div className="ntl-header">
+            <span className="ntl-num">#</span>
+            <span className="ntl-title-col">Title</span>
+            <span className="ntl-album">Album</span>
+            <span className="ntl-duration"><Clock size={14} /></span>
+          </div>
+          {smartTracks.map((track, index) => {
+            const active = currentTrack?.id === track.id;
+            return (
+              <button
+                key={track.id}
+                type="button"
+                className={`ntl-row ${active ? "active" : ""}`}
+                onClick={() => {
+                  setQueue(smartTracks);
+                  playTrack(track, "youtube");
+                }}
+              >
+                <span className={`ntl-num ${active && isPlaying ? "playing" : ""}`}>
+                  <span className="ntl-num-text">{active && isPlaying ? "♫" : index + 1}</span>
+                  <Play size={14} className="ntl-play-icon" />
+                </span>
+                <div className="ntl-track">
+                  <ImageWithFallback src={track.artworkUrl} alt={track.title} className="ntl-art" />
+                  <div className="ntl-track-info">
+                    <span className={`ntl-track-title ${active ? "active" : ""}`}>{track.title}</span>
+                    <span className="ntl-track-artist">{track.artistName}</span>
+                  </div>
+                </div>
+                <span className="ntl-album">{track.albumName || ""}</span>
+                <span className="ntl-duration">{formatDuration(track.durationMs)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-stack">
@@ -53,6 +200,16 @@ export default function Library() {
         </button>
         <button type="button" className="icon-button" onClick={shufflePlay} disabled={!likedTracks.length} aria-label="Shuffle">
           <Shuffle size={20} />
+        </button>
+        <button
+          type="button"
+          className="utility-button smart-button"
+          onClick={generateSmartPlaylist}
+          disabled={generating || !likedTracks.length}
+          title="Generate personalized recommendations mix"
+        >
+          {generating ? <Loader2 size={16} className="spinner" /> : <Sparkles size={16} />}
+          <span>{generating ? "Generating..." : "Smart Mix"}</span>
         </button>
       </div>
 

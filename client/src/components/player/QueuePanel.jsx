@@ -1,9 +1,12 @@
 import { ListMusic, Play, X } from "lucide-react";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
+import { PlayingBars } from "../common/PlayingBars.jsx";
 import { usePlayerStore } from "../../store/playerStore.js";
 
 export function QueuePanel({ open, onClose }) {
   const currentTrack = usePlayerStore((state) => state.currentTrack);
+  const isPlaying = usePlayerStore((state) => state.isPlaying);
+  const isBuffering = usePlayerStore((state) => state.isBuffering);
   const queue = usePlayerStore((state) => state.queue);
   const playTrack = usePlayerStore((state) => state.playTrack);
   const removeFromQueue = usePlayerStore((state) => state.removeFromQueue);
@@ -31,6 +34,7 @@ export function QueuePanel({ open, onClose }) {
               <span className="queue-title">{currentTrack.title}</span>
               <span className="queue-artist">{currentTrack.artistName}</span>
             </div>
+            <PlayingBars isPlaying={isPlaying} isBuffering={isBuffering} />
           </div>
         </div>
       )}
