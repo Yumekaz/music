@@ -11,3 +11,11 @@ coverage/
 client/dev-dist/
 server/.cache/
 music-app-v3-final.md
+
+# Temp debug/verification scripts
+verify_*.js
+check_*.js
+test_ws.js
+scratch/
+chrome_error.txt
+chrome_out.txt
