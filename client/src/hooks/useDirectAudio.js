@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
 import { getDirectAudioElement, loadDirectAudio, fadeOutAndSwap } from "../lib/directAudio.js";
 import { useSettingsStore } from "../store/settingsStore.js";
+import { usePlayerStore } from "../store/playerStore.js";
 
 export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpdate, onEnded }) {
   const audioRef = useRef(getDirectAudioElement());
   const isDirect = sourceType === "preview" || sourceType === "jamendo";
+  const seekTarget = usePlayerStore((state) => state.seekTarget);
 
   // Stable refs so track-change effect doesn't re-run on every render
   const isPlayingRef = useRef(isPlaying);
@@ -47,6 +49,15 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
       audio.pause();
     }
   }, [isDirect, isPlaying]);
+
+  // Handle seekTarget
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !isDirect || seekTarget === null) return;
+
+    audio.currentTime = seekTarget / 1000;
+    usePlayerStore.getState().setSeekTarget(null);
+  }, [isDirect, seekTarget]);
 
   // Event listeners
   useEffect(() => {

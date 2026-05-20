@@ -9,7 +9,7 @@ export function PlayerControls({ disabled, isPlaying, onToggle, onNext, onPrevio
   const cycleRepeat = usePlayerStore((state) => state.cycleRepeat);
 
   return (
-    <div className="player-controls">
+    <div className="player-controls" onClick={(e) => e.stopPropagation()}>
       <button
         type="button"
         className={`icon-button icon-button--small ${shuffle ? "active" : ""}`}

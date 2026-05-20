@@ -902,18 +902,44 @@ h2 {
 .play-button {
   width: 38px;
   height: 38px;
-  display: inline-grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #242c24;
   border-radius: 999px;
   color: #f5f7f2;
   background: #101510;
+  transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
 
 .play-button {
   background: #1ed760;
   color: #080b0a;
   border-color: #1ed760;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Offset the Play triangle icon slightly to the right to look visually centered */
+.play-button .lucide-play {
+  transform: translateX(1.5px);
+}
+.play-button--large .lucide-play {
+  transform: translateX(2.5px);
+}
+
+.icon-button:active,
+.play-button:active {
+  transform: scale(0.93) !important;
+}
+
+@media (hover: hover) {
+  .icon-button:hover:not(:disabled),
+  .play-button:hover:not(:disabled) {
+    transform: scale(1.06);
+    filter: brightness(1.1);
+  }
 }
 
 .play-button.small {
@@ -1905,6 +1931,13 @@ input[type="range"] {
     padding: 0 12px !important;
     z-index: 500 !important;
     overflow: hidden !important;
+    cursor: pointer !important;
+  }
+
+  .player-bar button,
+  .player-bar input,
+  .player-bar [role="button"] {
+    cursor: default !important;
   }
 
   .player-media {
@@ -1976,33 +2009,47 @@ input[type="range"] {
     display: none !important; /* Hide volume and queue toggles on mobile mini player */
   }
 
-  /* Mobile Controls layout */
-  .player-controls {
+  /* Mobile Controls layout for mini-player card */
+  .player-bar .player-controls {
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
   }
 
   /* Hide Shuffle, Previous, and Repeat on the mobile mini-player card */
-  .player-controls button:nth-child(1), /* Shuffle */
-  .player-controls button:nth-child(2), /* Previous */
-  .player-controls button:nth-child(5)  /* Repeat */ {
+  .player-bar .player-controls button:nth-child(1), /* Shuffle */
+  .player-bar .player-controls button:nth-child(2), /* Previous */
+  .player-bar .player-controls button:nth-child(5)  /* Repeat */ {
     display: none !important;
   }
 
-  .player-controls button:nth-child(3), /* Play */
-  .player-controls button:nth-child(4)  /* Next */ {
-    display: inline-flex !important;
+  .player-bar .player-controls button:nth-child(3), /* Play */
+  .player-bar .player-controls button:nth-child(4)  /* Next */ {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
-  .player-controls .play-button {
+  .player-bar .player-controls .play-button {
     width: 36px !important;
     height: 36px !important;
     min-height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
-  /* Sleek dynamic top progress bar line */
-  .progress-wrap {
+  .player-bar .player-controls .play-button svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .player-bar .player-controls .play-button .lucide-play {
+    transform: translateX(1px) !important;
+  }
+
+  /* Sleek dynamic top progress bar line on mini player card */
+  .player-bar .progress-wrap {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
@@ -2016,11 +2063,11 @@ input[type="range"] {
     background: rgba(255, 255, 255, 0.1) !important;
   }
 
-  .progress-wrap span {
-    display: none !important; /* Hide time indicators */
+  .player-bar .progress-wrap span {
+    display: none !important; /* Hide time indicators on mini player */
   }
 
-  .progress-wrap input[type="range"] {
+  .player-bar .progress-wrap input[type="range"] {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
@@ -2040,21 +2087,21 @@ input[type="range"] {
     appearance: none !important;
   }
 
-  .progress-wrap input[type="range"]::-webkit-slider-runnable-track {
+  .player-bar .progress-wrap input[type="range"]::-webkit-slider-runnable-track {
     background: transparent !important;
   }
 
-  .progress-wrap input[type="range"]::-webkit-slider-thumb {
+  .player-bar .progress-wrap input[type="range"]::-webkit-slider-thumb {
     display: none !important;
     -webkit-appearance: none !important;
     appearance: none !important;
   }
 
-  .progress-wrap input[type="range"]::-moz-range-track {
+  .player-bar .progress-wrap input[type="range"]::-moz-range-track {
     background: transparent !important;
   }
 
-  .progress-wrap input[type="range"]::-moz-range-thumb {
+  .player-bar .progress-wrap input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
 }
@@ -2997,3 +3044,385 @@ input[type="range"] {
   flex-shrink: 0;
   display: inline-flex;
 }
+
+
+/* ═══════════════════════════════════════════════
+   NOW PLAYING MOBILE UX & CONTROLS
+   ═══════════════════════════════════════════════ */
+
+/* Now Playing back button header */
+.now-playing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 56px;
+  padding: 0 4px;
+  margin-bottom: 8px;
+  grid-column: 1 / -1;
+}
+
+.now-playing-back {
+  background: transparent;
+  border: none;
+  color: #f5f7f2;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 200ms ease;
+}
+
+.now-playing-back:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.now-playing-header-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(245, 247, 242, 0.6);
+}
+
+/* Now Playing page playback controls wrapper */
+.now-playback-controls {
+  margin: 24px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 480px;
+  padding: 0 8px;
+}
+
+/* Premium sizing and spacing hierarchy for Now Playing page controls */
+.now-playback-controls .player-controls {
+  width: 100%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 16px;
+  margin: 8px 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Play/Pause Button on Now Playing page */
+.now-playback-controls .player-controls .play-button {
+  width: 68px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  min-width: 68px !important;
+  background: #1ed760 !important;
+  color: #080b0a !important;
+  border: none !important;
+  border-radius: 50% !important;
+  box-shadow: 0 8px 24px rgba(30, 215, 96, 0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Play/Pause Icon size inside the large play button */
+.now-playback-controls .player-controls .play-button svg {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.now-playback-controls .player-controls .play-button .lucide-play {
+  transform: translateX(2.5px) !important;
+}
+
+/* Medium Controls (Previous & Next) */
+.now-playback-controls .player-controls button:nth-child(2),
+.now-playback-controls .player-controls button:nth-child(4) {
+  width: 48px !important;
+  height: 48px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.now-playback-controls .player-controls button:nth-child(2) svg,
+.now-playback-controls .player-controls button:nth-child(4) svg {
+  width: 26px !important;
+  height: 26px !important;
+}
+
+/* Small Controls (Shuffle & Repeat) */
+.now-playback-controls .player-controls button:nth-child(1),
+.now-playback-controls .player-controls button:nth-child(5) {
+  width: 40px !important;
+  height: 40px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #b3b3b3 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.now-playback-controls .player-controls button:nth-child(1) svg,
+.now-playback-controls .player-controls button:nth-child(5) svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.now-playback-controls .player-controls button:nth-child(1).active,
+.now-playback-controls .player-controls button:nth-child(5).active {
+  color: #1ed760 !important;
+}
+
+/* Active Press scale for Now Playing controls */
+.now-playback-controls .player-controls button:active {
+  transform: scale(0.9) !important;
+}
+
+.now-playback-controls .player-controls .play-button:active {
+  transform: scale(0.88) !important;
+  box-shadow: 0 4px 12px rgba(30, 215, 96, 0.15) !important;
+}
+
+@media (hover: hover) {
+  .now-playback-controls .player-controls button:hover {
+    color: #ffffff !important;
+  }
+  .now-playback-controls .player-controls .play-button:hover {
+    background: #1fdf64 !important;
+    transform: scale(1.06) !important;
+  }
+}
+
+/* Ensure progress bar inside Now Playing page is fully functional */
+.now-playback-controls .progress-wrap {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.now-playback-controls .progress-wrap span {
+  font-size: 0.78rem;
+  color: rgba(245, 247, 242, 0.6);
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+}
+
+.now-playback-controls .progress-wrap input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    #1ed760 0%,
+    #1ed760 var(--progress, 0%),
+    rgba(255, 255, 255, 0.12) var(--progress, 0%),
+    rgba(255, 255, 255, 0.12) 100%
+  ) !important;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  border: none;
+}
+
+.now-playback-controls .progress-wrap input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: transform 150ms ease;
+}
+
+.now-playback-controls .progress-wrap input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.now-playback-controls .progress-wrap input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: none;
+  transition: transform 150ms ease;
+}
+
+.now-playback-controls .progress-wrap input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Style volume control inside Now Playing page */
+.now-playback-controls .volume-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  color: rgba(245, 247, 242, 0.6);
+}
+
+.now-playback-controls .volume-control input[type="range"] {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #f5f7f2 var(--volume-percent, 50%),
+    rgba(255, 255, 255, 0.1) var(--volume-percent, 50%)
+  );
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.now-playback-controls .volume-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.now-playback-controls .volume-control input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+}
+
+/* Route-specific player and nav hiding on mobile viewports */
+@media (max-width: 768px) {
+  .app-shell[data-route="/now-playing"] .player-bar {
+    display: none !important;
+  }
+  
+  .app-shell[data-route="/now-playing"] .mobile-nav {
+    display: none !important;
+  }
+  
+  .app-shell[data-route="/now-playing"] .main-surface {
+    padding-top: 8px !important;
+    padding-bottom: 24px !important;
+    height: 100svh !important;
+    max-height: 100svh !important;
+    overflow-y: auto !important;
+  }
+
+  .now-playing-page {
+    padding: 12px 16px 32px !important;
+  }
+
+  /* Scale the YouTube iframe correctly in the mini player on mobile */
+  .player-bar .player-media .mini-youtube {
+    width: 200px !important;
+    height: 200px !important;
+    min-width: 200px !important;
+    min-height: 200px !important;
+    transform: scale(0.22) !important;
+    transform-origin: top left !important;
+  }
+}
+
+/* ─── Tactile Active Scaling (Haptics) & Transitions ─── */
+.icon-button,
+.play-button,
+.now-playing-back,
+.nav-item,
+.mobile-nav a,
+.track-row {
+  transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease !important;
+}
+
+.icon-button:active,
+.play-button:active,
+.now-playing-back:active,
+.nav-item:active,
+.mobile-nav a:active {
+  transform: scale(0.94) !important;
+}
+
+.track-row:active {
+  transform: scale(0.985) !important;
+}
+
+/* Hover effects for desktop users */
+@media (hover: hover) {
+  .icon-button:hover:not(:disabled),
+  .play-button:hover:not(:disabled) {
+    transform: scale(1.06);
+  }
+  .track-row:hover {
+    transform: scale(1.005);
+  }
+}
+
+/* Search Page Landing Styles */
+.search-landing-container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.browse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.browse-card {
+  position: relative;
+  aspect-ratio: 1.5;
+  border: 0;
+  border-radius: 12px;
+  padding: 16px;
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.browse-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.browse-card span {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Subtle gloss effect on browse cards */
+.browse-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+  z-index: 1;
+  pointer-events: none;
+}
+

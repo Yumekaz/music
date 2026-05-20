@@ -46,7 +46,7 @@ export default function Track() {
           </div>
         </div>
       </section>
-      <LyricsPanel trackId={track.data.id} positionMs={positionMs} />
+      <LyricsPanel track={track.data} positionMs={positionMs} />
     </div>
   );
 }

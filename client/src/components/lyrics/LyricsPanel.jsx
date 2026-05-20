@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
 import { useLyrics } from "../../hooks/useLyrics.js";
 
-export function LyricsPanel({ trackId, positionMs = 0 }) {
-  const { data, isLoading } = useLyrics(trackId);
+export function LyricsPanel({ track, positionMs = 0 }) {
+  const trackId = track?.id;
+  const title = track?.title;
+  const artistName = track?.artistName;
+  const { data, isLoading } = useLyrics(trackId, title, artistName);
   const containerRef = useRef(null);
 
   const activeIndex =
@@ -13,10 +16,13 @@ export function LyricsPanel({ trackId, positionMs = 0 }) {
     if (!containerRef.current) return;
     const activeEl = containerRef.current.querySelector(".lyrics-line.active");
     if (activeEl) {
-      activeEl.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "nearest"
+      const container = containerRef.current;
+      const elemTop = activeEl.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+      const targetScrollTop = elemTop - (container.clientHeight / 2) + (activeEl.clientHeight / 2);
+      
+      container.scrollTo({
+        top: targetScrollTop,
+        behavior: "smooth"
       });
     }
   }, [activeIndex]);

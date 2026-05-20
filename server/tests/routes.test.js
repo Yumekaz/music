@@ -47,4 +47,13 @@ describe("api routes", () => {
     expect(response.headers["content-type"]).toContain("audio/wav");
     expect(Number(response.headers["content-length"])).toBeGreaterThan(1000);
   });
+
+  it("resolves dynamic lyrics using title and artist query params", async () => {
+    const response = await request(app)
+      .get("/api/tracks/dummy-id/lyrics?title=Kesariya&artist=Arijit%20Singh")
+      .expect(200);
+
+    expect(response.body.trackId).toBe("dummy-id");
+    expect(response.body.plain).toContain("Kesariya");
+  });
 });

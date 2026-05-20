@@ -47,4 +47,18 @@ describe("playerStore", () => {
 
     expect(usePlayerStore.getState().currentTrack.id).toBe("track-two");
   });
+
+  it("handles play/pause and seeking", () => {
+    usePlayerStore.getState().playTrack(track, "youtube");
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    usePlayerStore.getState().pause();
+    expect(usePlayerStore.getState().isPlaying).toBe(false);
+
+    usePlayerStore.getState().resume();
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+
+    usePlayerStore.getState().setSeekTarget(5000);
+    expect(usePlayerStore.getState().seekTarget).toBe(5000);
+  });
 });

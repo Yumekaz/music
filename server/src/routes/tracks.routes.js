@@ -39,7 +39,8 @@ router.get("/:id", async (request, response, next) => {
 
 router.get("/:id/lyrics", async (request, response, next) => {
   try {
-    const lyrics = await getLyricsForTrackId(request.params.id);
+    const { title, artist } = request.query;
+    const lyrics = await getLyricsForTrackId(request.params.id, title, artist);
     if (!lyrics) {
       response.status(404).json({ error: "Lyrics not found" });
       return;

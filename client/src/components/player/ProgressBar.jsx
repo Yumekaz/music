@@ -4,7 +4,7 @@ export function ProgressBar({ positionMs, durationMs, onSeek }) {
   const progress = durationMs ? Math.min(positionMs / durationMs, 1) * 100 : 0;
 
   return (
-    <div className="progress-wrap">
+    <div className="progress-wrap" onClick={(e) => e.stopPropagation()}>
       <span>{formatDuration(positionMs)}</span>
       <input
         aria-label="Playback progress"

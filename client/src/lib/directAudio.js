@@ -143,6 +143,10 @@ export async function playDirectAudio(track, sourceType) {
 }
 
 export function pauseDirectAudio() {
+  if (fadeTimer) {
+    clearInterval(fadeTimer);
+    fadeTimer = null;
+  }
   const audio = getDirectAudioElement();
   audio?.pause();
 }

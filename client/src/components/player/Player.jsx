@@ -126,9 +126,20 @@ export function Player({ online }) {
     });
   }
 
+  const handleBarClick = (e) => {
+    // Only navigate to Now Playing on mobile viewports when clicking non-interactive areas
+    if (window.innerWidth <= 768 && currentTrack) {
+      navigate("/now-playing");
+    }
+  };
+
   return (
     <>
-      <footer className="player-bar" aria-label="Persistent player">
+      <footer 
+        className="player-bar" 
+        aria-label="Persistent player"
+        onClick={handleBarClick}
+      >
         <div className="player-media" onClick={() => currentTrack && navigate("/now-playing")} role="button" tabIndex={0}>
           {currentTrack && sourceType === "youtube" ? (
             <YouTubeEmbed 
@@ -153,7 +164,10 @@ export function Player({ online }) {
             <button
               type="button"
               className={`icon-button icon-button--small player-heart ${isLiked ? "liked" : ""}`}
-              onClick={handleLike}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLike();
+              }}
               aria-label={isLiked ? "Unlike" : "Like"}
             >
               <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
@@ -175,12 +189,7 @@ export function Player({ online }) {
             durationMs={durationMs || currentTrack?.durationMs || 0}
             onSeek={(pos) => {
               setPosition(pos);
-              if (directEnabled) {
-                const audio = document.getElementById("direct-audio-player");
-                if (audio) audio.currentTime = pos / 1000;
-              } else {
-                usePlayerStore.getState().setSeekTarget(pos);
-              }
+              usePlayerStore.getState().setSeekTarget(pos);
             }}
           />
         </div>
@@ -189,7 +198,10 @@ export function Player({ online }) {
           <button
             type="button"
             className={`icon-button icon-button--small ${queueOpen ? "active" : ""}`}
-            onClick={() => setQueueOpen(!queueOpen)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setQueueOpen(!queueOpen);
+            }}
             aria-label="Toggle queue"
           >
             <ListMusic size={18} />

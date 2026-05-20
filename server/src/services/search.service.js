@@ -58,8 +58,38 @@ export async function searchCatalog(query, limit = 8) {
 export async function getCharts() {
   return getOrSetCached("discovery:charts", TTL.charts, async () => {
     const topTracks = await getTopTracks();
+    const resolvedTracks = await Promise.all(
+      topTracks.slice(0, 8).map(async (track) => {
+        if (track.videoId) {
+          return track;
+        }
+        try {
+          const query = `${track.title} ${track.artistName}`;
+          const ytResults = await searchYouTube(query, 1);
+          if (ytResults && ytResults.length > 0) {
+            const yt = ytResults[0];
+            return {
+              ...track,
+              videoId: yt.videoId,
+              durationMs: yt.durationMs || track.durationMs || 0,
+              artworkUrl: (!track.artworkUrl || track.artworkUrl.includes("2a96cbd8b46e442fc41c2b86b821562f"))
+                ? yt.artworkUrl
+                : track.artworkUrl,
+              externalLinks: {
+                ...track.externalLinks,
+                youtube: `https://www.youtube.com/watch?v=${yt.videoId}`
+              }
+            };
+          }
+        } catch (e) {
+          console.warn("Failed to resolve chart track from YouTube:", track.title, e);
+        }
+        return track;
+      })
+    );
+
     return {
-      tracks: topTracks.map((track) => normalizeTrack(track, { lyricsAvailable: Boolean(track.lyricsAvailable) })),
+      tracks: resolvedTracks.map((track) => normalizeTrack(track, { lyricsAvailable: Boolean(track.lyricsAvailable) })),
       artists: artists.map(normalizeArtist),
       albums: albums.map(normalizeAlbum)
     };
