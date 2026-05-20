@@ -1234,6 +1234,18 @@ h2 {
   text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
+.plain-lyrics-line {
+  margin: 0;
+  opacity: 0.85;
+  font-weight: 700;
+  color: #ffffff;
+  transition: opacity 200ms ease;
+}
+
+.plain-lyrics-line:hover {
+  opacity: 1;
+}
+
 .player-bar {
   position: fixed;
   left: 260px;
@@ -1723,6 +1735,23 @@ input[type="range"] {
   gap: 12px;
   padding: 6px 0;
   border-radius: 6px;
+  cursor: grab;
+  transition: transform 150ms ease, opacity 150ms ease, border 150ms ease;
+}
+
+.queue-item:active {
+  cursor: grabbing;
+}
+
+.queue-item.dragging {
+  opacity: 0.3;
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.queue-item.drag-over {
+  border-top: 2px solid #1db954;
+  border-radius: 0;
 }
 
 .queue-item.active {

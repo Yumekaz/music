@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ListMusic, Play, X } from "lucide-react";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { PlayingBars } from "../common/PlayingBars.jsx";
@@ -11,10 +12,46 @@ export function QueuePanel({ open, onClose }) {
   const playTrack = usePlayerStore((state) => state.playTrack);
   const removeFromQueue = usePlayerStore((state) => state.removeFromQueue);
 
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
   if (!open) return null;
 
   const currentIndex = queue.findIndex((t) => t.id === currentTrack?.id);
   const upNext = currentIndex >= 0 ? queue.slice(currentIndex + 1) : queue;
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+    const offset = currentIndex >= 0 ? currentIndex + 1 : 0;
+    const fromGlobal = offset + draggedIndex;
+    const toGlobal = offset + targetIndex;
+
+    const reorderQueue = usePlayerStore.getState().reorderQueue;
+    reorderQueue(fromGlobal, toGlobal);
+
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   return (
     <div className="queue-panel">
@@ -39,11 +76,19 @@ export function QueuePanel({ open, onClose }) {
         </div>
       )}
 
-      <div className="queue-section">
+      <div className="queue-section animate-slide-in">
         <span className="queue-label">Next Up</span>
         {upNext.length > 0 ? (
           upNext.map((track, i) => (
-            <div key={`${track.id}-${i}`} className="queue-item">
+            <div
+              key={`${track.id}-${i}`}
+              className={`queue-item ${draggedIndex === i ? "dragging" : ""} ${dragOverIndex === i ? "drag-over" : ""}`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDragEnd={handleDragEnd}
+              onDrop={(e) => handleDrop(e, i)}
+            >
               <ImageWithFallback src={track.artworkUrl} alt={track.title} className="queue-art" />
               <div className="queue-info">
                 <span className="queue-title">{track.title}</span>

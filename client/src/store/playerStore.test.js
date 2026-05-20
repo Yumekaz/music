@@ -61,4 +61,19 @@ describe("playerStore", () => {
     usePlayerStore.getState().setSeekTarget(5000);
     expect(usePlayerStore.getState().seekTarget).toBe(5000);
   });
+
+  it("reorders the queue", () => {
+    const track1 = { ...track, id: "track-1" };
+    const track2 = { ...track, id: "track-2" };
+    const track3 = { ...track, id: "track-3" };
+    usePlayerStore.getState().setQueue([track1, track2, track3]);
+
+    // Move track-1 from index 0 to index 2
+    usePlayerStore.getState().reorderQueue(0, 2);
+
+    const queue = usePlayerStore.getState().queue;
+    expect(queue[0].id).toBe("track-2");
+    expect(queue[1].id).toBe("track-3");
+    expect(queue[2].id).toBe("track-1");
+  });
 });

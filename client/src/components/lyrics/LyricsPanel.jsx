@@ -49,7 +49,13 @@ export function LyricsPanel({ track, positionMs = 0 }) {
           ))}
         </div>
       ) : (
-        <pre className="plain-lyrics">{data.plain}</pre>
+        <div className="lyrics-lines">
+          {data.plain.split("\n").map((line, index) => (
+            <p key={index} className="plain-lyrics-line">
+              {line.trim() || "\u00A0"}
+            </p>
+          ))}
+        </div>
       )}
     </section>
   );

@@ -1,35 +1,69 @@
-import { Clock, ListMusic, Pause, Play, Shuffle, Trash2 } from "lucide-react";
+import { Clock, ListMusic, Pause, Play, Share2, Shuffle, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { useColorExtract } from "../hooks/useColorExtract.js";
 import { useLibraryStore } from "../store/libraryStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
+import { useToast } from "../components/common/ToastProvider.jsx";
 
 export default function Playlist() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { playlists, hydrate, savePlaylist, deletePlaylist } = useLibraryStore();
   const playTrack = usePlayerStore((state) => state.playTrack);
   const setQueue = usePlayerStore((state) => state.setQueue);
   const currentTrack = usePlayerStore((state) => state.currentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
+  const showToast = useToast();
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
+  const [sharedPlaylist, setSharedPlaylist] = useState(null);
 
   useEffect(() => {
     hydrate().catch(() => {});
   }, [hydrate]);
 
-  const playlist = playlists.find((p) => p.id === id);
+  // Decode shared playlist if route is shared
+  useEffect(() => {
+    if (id === "shared") {
+      const params = new URLSearchParams(location.search);
+      const dataParam = params.get("data");
+      if (dataParam) {
+        try {
+          const jsonStr = decodeURIComponent(
+            atob(dataParam)
+              .split("")
+              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+              .join("")
+          );
+          const parsed = JSON.parse(jsonStr);
+          if (parsed && parsed.name) {
+            setSharedPlaylist({
+              id: "shared",
+              name: parsed.name,
+              tracks: parsed.tracks || [],
+              isShared: true
+            });
+            setName(parsed.name);
+          }
+        } catch (err) {
+          console.error("Failed to parse shared playlist", err);
+        }
+      }
+    }
+  }, [id, location.search]);
+
+  const playlist = id === "shared" ? sharedPlaylist : playlists.find((p) => p.id === id);
 
   useEffect(() => {
-    if (playlist) setName(playlist.name);
-  }, [playlist]);
+    if (playlist && id !== "shared") setName(playlist.name);
+  }, [playlist, id]);
 
   if (!playlist) {
-    return <p className="empty-state">Playlist not found.</p>;
+    return <p className="empty-state">{id === "shared" ? "Loading shared playlist..." : "Playlist not found."}</p>;
   }
 
   const tracks = playlist.tracks || [];
@@ -72,6 +106,52 @@ export default function Playlist() {
     }
   }
 
+  function handleShare() {
+    if (!tracks.length) return;
+    try {
+      const payload = {
+        name: playlist.name,
+        tracks: tracks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          artistName: t.artistName,
+          albumName: t.albumName,
+          artworkUrl: t.artworkUrl,
+          durationMs: t.durationMs,
+          videoId: t.videoId,
+          previewUrl: t.previewUrl,
+          jamendoUrl: t.jamendoUrl
+        }))
+      };
+
+      const jsonStr = JSON.stringify(payload);
+      const base64 = btoa(
+        encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, (match, p1) =>
+          String.fromCharCode(parseInt(p1, 16))
+        )
+      );
+
+      const shareUrl = `${window.location.origin}/playlists/shared?data=${base64}`;
+      navigator.clipboard.writeText(shareUrl);
+      showToast?.("Share link copied to clipboard!");
+    } catch (err) {
+      console.error("Failed to generate share URL:", err);
+      showToast?.("Failed to generate share link.");
+    }
+  }
+
+  function handleImport() {
+    if (!playlist || !tracks.length) return;
+    const newId = `playlist-${Date.now()}`;
+    savePlaylist({
+      id: newId,
+      name: playlist.name,
+      tracks: tracks
+    });
+    showToast?.("Saved playlist to your library!");
+    navigate(`/playlists/${newId}`);
+  }
+
   return (
     <div className="page-stack">
       <header
@@ -95,7 +175,7 @@ export default function Playlist() {
         </div>
         <div className="playlist-header-info">
           <span className="liked-label">Playlist</span>
-          {editing ? (
+          {editing && !playlist.isShared ? (
             <input
               className="playlist-name-input"
               value={name}
@@ -105,7 +185,11 @@ export default function Playlist() {
               autoFocus
             />
           ) : (
-            <h1 className="playlist-name" onClick={() => setEditing(true)} title="Click to rename">
+            <h1
+              className="playlist-name"
+              onClick={() => !playlist.isShared && setEditing(true)}
+              title={playlist.isShared ? "" : "Click to rename"}
+            >
               {playlist.name}
             </h1>
           )}
@@ -123,9 +207,27 @@ export default function Playlist() {
         <button type="button" className="icon-button" onClick={shufflePlay} disabled={!tracks.length} aria-label="Shuffle">
           <Shuffle size={20} />
         </button>
-        <button type="button" className="icon-button" onClick={handleDelete} aria-label="Delete playlist" style={{ marginLeft: "auto" }}>
-          <Trash2 size={18} />
-        </button>
+
+        {tracks.length > 0 && (
+          <button type="button" className="icon-button" onClick={handleShare} aria-label="Share playlist" title="Copy share link">
+            <Share2 size={20} />
+          </button>
+        )}
+
+        {!playlist.isShared ? (
+          <button type="button" className="icon-button" onClick={handleDelete} aria-label="Delete playlist" style={{ marginLeft: "auto" }}>
+            <Trash2 size={18} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="play-button"
+            style={{ marginLeft: "auto", fontSize: "0.85rem", height: "36px", padding: "0 16px", borderRadius: "18px" }}
+            onClick={handleImport}
+          >
+            Save to Library
+          </button>
+        )}
       </div>
 
       {tracks.length > 0 ? (
@@ -162,9 +264,11 @@ export default function Playlist() {
                   <span className="ntl-album">{track.albumName || ""}</span>
                   <span className="ntl-duration">{formatDuration(track.durationMs)}</span>
                 </button>
-                <button type="button" className="ntl-remove" onClick={() => removeTrack(track.id)} aria-label="Remove from playlist">
-                  ×
-                </button>
+                {!playlist.isShared && (
+                  <button type="button" className="ntl-remove" onClick={() => removeTrack(track.id)} aria-label="Remove from playlist">
+                    ×
+                  </button>
+                )}
               </div>
             );
           })}

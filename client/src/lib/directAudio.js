@@ -53,6 +53,14 @@ export function getBiquadFilters() {
 
 export function setupAudioGraph() {
   if (isAudioGraphSetup) return;
+
+  // Detect if mobile browser
+  const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) {
+    console.log("[directAudio] Mobile browser detected; bypassing AudioContext graph for background playback support.");
+    return;
+  }
+
   const audio = getDirectAudioElement();
   const ctx = getAudioContext();
   if (!audio || !ctx) return;
