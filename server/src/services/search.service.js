@@ -58,33 +58,58 @@ export async function searchCatalog(query, limit = 8) {
 export async function getCharts() {
   return getOrSetCached("discovery:charts", TTL.charts, async () => {
     const topTracks = await getTopTracks();
+    const { getPreviewForTrack } = await import("./providers/itunes.provider.js");
+
     const resolvedTracks = await Promise.all(
       topTracks.slice(0, 8).map(async (track) => {
         if (track.videoId) {
           return track;
         }
+
+        let resolved = { ...track };
+
+        // 1. Try to resolve via YouTube (if API key is available and non-fallback)
         try {
           const query = `${track.title} ${track.artistName}`;
           const ytResults = await searchYouTube(query, 1);
-          if (ytResults && ytResults.length > 0) {
+          if (ytResults && ytResults.length > 0 && !ytResults[0].source.startsWith("fallback")) {
             const yt = ytResults[0];
-            return {
-              ...track,
+            resolved = {
+              ...resolved,
               videoId: yt.videoId,
-              durationMs: yt.durationMs || track.durationMs || 0,
-              artworkUrl: (!track.artworkUrl || track.artworkUrl.includes("2a96cbd8b46e442fc41c2b86b821562f"))
+              durationMs: yt.durationMs || resolved.durationMs || 0,
+              artworkUrl: (!resolved.artworkUrl || resolved.artworkUrl.includes("2a96cbd8b46e442fc41c2b86b821562f"))
                 ? yt.artworkUrl
-                : track.artworkUrl,
+                : resolved.artworkUrl,
               externalLinks: {
-                ...track.externalLinks,
+                ...resolved.externalLinks,
                 youtube: `https://www.youtube.com/watch?v=${yt.videoId}`
               }
             };
+            return resolved;
           }
         } catch (e) {
           console.warn("Failed to resolve chart track from YouTube:", track.title, e);
         }
-        return track;
+
+        // 2. Fallback: Resolve via iTunes (no API key required) to get valid duration and artwork
+        try {
+          const itunesMatch = await getPreviewForTrack(track.title, track.artistName);
+          if (itunesMatch) {
+            resolved = {
+              ...resolved,
+              previewUrl: itunesMatch.previewUrl || resolved.previewUrl || "",
+              durationMs: itunesMatch.durationMs || resolved.durationMs || 0,
+              artworkUrl: (!resolved.artworkUrl || resolved.artworkUrl.includes("2a96cbd8b46e442fc41c2b86b821562f"))
+                ? (itunesMatch.artworkUrl || resolved.artworkUrl)
+                : resolved.artworkUrl
+            };
+          }
+        } catch (e) {
+          console.warn("Failed to resolve chart track from iTunes:", track.title, e);
+        }
+
+        return resolved;
       })
     );
 

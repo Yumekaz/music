@@ -51,8 +51,18 @@ export async function getPreviewForTrack(title, artistName) {
       item.artistName?.toLowerCase().includes(normalizedArtist)
   );
 
-  return match || {
-    ...resolveFixtureTrack(title, artistName),
-    source: "fallback-itunes"
-  };
+  if (match) return match;
+
+  // Only fall back to fixtures if the query actually matches one of them
+  const isFixtureQuery = ["blinding lights", "kesariya", "pasoori"].some((name) =>
+    title.toLowerCase().includes(name)
+  );
+  if (isFixtureQuery) {
+    return {
+      ...resolveFixtureTrack(title, artistName),
+      source: "fallback-itunes"
+    };
+  }
+
+  return null;
 }

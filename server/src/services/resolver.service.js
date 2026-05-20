@@ -12,7 +12,26 @@ import { searchYouTube } from "./providers/youtube.provider.js";
 export async function resolveTrack({ title, artist }) {
   const key = `resolve:${title}:${artist}`;
   return getOrSetCached(key, 60 * 60, async () => {
-    const fallback = resolveFixtureTrack(title, artist);
+    let fallback = resolveFixtureTrack(title, artist);
+
+    // If resolveFixtureTrack returned the default (Blinding Lights) but the query is not for it,
+    // generate a dynamic fallback object to avoid forcing all searches to Blinding Lights.
+    const isFixtureQuery = ["blinding lights", "kesariya", "pasoori"].some((name) =>
+      title.toLowerCase().includes(name)
+    );
+
+    if (fallback?.id === "track-blinding-lights" && !isFixtureQuery) {
+      fallback = {
+        id: `resolved-${title.toLowerCase().replace(/\s+/g, "-")}`,
+        title,
+        artistName: artist || "Unknown Artist",
+        albumName: "",
+        durationMs: 0,
+        artworkUrl: "",
+        availableProviders: [],
+        externalLinks: {}
+      };
+    }
 
     const [youtubeResult, mbResult, previewResult, jiosaavnResult, jamendoResults] = await Promise.all([
       searchYouTube(`${title} ${artist}`, 5),
