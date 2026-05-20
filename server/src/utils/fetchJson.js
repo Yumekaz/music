@@ -1,5 +1,5 @@
 export async function fetchJson(url, options = {}) {
-  const { timeoutMs = 6000, ...fetchOptions } = options;
+  const { timeoutMs = 10000, ...fetchOptions } = options;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 

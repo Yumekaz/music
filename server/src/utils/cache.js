@@ -2,6 +2,7 @@ import { Redis } from "@upstash/redis";
 import { env } from "../config/env.js";
 
 const memory = new Map();
+let redisWarned = false;
 
 function createRedis() {
   if (!env.upstashRedisRestUrl || !env.upstashRedisRestToken || env.nodeEnv === "test") {
@@ -38,7 +39,7 @@ export async function getCached(key) {
     try {
       return await redis.get(key);
     } catch (error) {
-      console.warn("Redis get error, falling back to memory:", error.message);
+      if (!redisWarned) { console.warn("Redis unavailable, using in-memory cache"); redisWarned = true; }
     }
   }
 
@@ -51,7 +52,7 @@ export async function setCached(key, value, ttlSeconds) {
       await redis.set(key, value, { ex: ttlSeconds });
       return;
     } catch (error) {
-      console.warn("Redis set error, falling back to memory:", error.message);
+      if (!redisWarned) { console.warn("Redis unavailable, using in-memory cache"); redisWarned = true; }
     }
   }
 
