@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { playDirectAudio } from "../lib/directAudio.js";
+import { playDirectAudio, playDirectAudioSync } from "../lib/directAudio.js";
 import { getRecommendations } from "../services/search.js";
 
 function resolveSourceType(track, sourceType) {
@@ -48,7 +48,7 @@ export const usePlayerStore = create(
         const resolvedSourceType = resolveSourceType(track, sourceType);
 
         if (isDirectSource(resolvedSourceType)) {
-          playDirectAudio(track, resolvedSourceType).catch(() => {});
+          playDirectAudioSync(track, resolvedSourceType);
         }
 
         set({

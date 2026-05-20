@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { getDirectAudioElement, loadDirectAudio, fadeOutAndSwap } from "../lib/directAudio.js";
+import { getDirectAudioElement, loadDirectAudio, loadDirectAudioSync, fadeOutAndSwap } from "../lib/directAudio.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 
@@ -33,7 +33,7 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
     if (isPlayingRef.current && crossfadeDurationRef.current > 0) {
       fadeOutAndSwap(track, sourceType, crossfadeDurationRef.current, volume);
     } else {
-      loadDirectAudio(track, sourceType);
+      loadDirectAudioSync(track, sourceType);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirect, sourceType, track, volume]);

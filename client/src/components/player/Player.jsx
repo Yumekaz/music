@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { useToast } from "../common/ToastProvider.jsx";
 import { useDirectAudio } from "../../hooks/useDirectAudio.js";
-import { pauseDirectAudio, playDirectAudio } from "../../lib/directAudio.js";
+import { pauseDirectAudio, playDirectAudio, prefetchDirectAudioSource } from "../../lib/directAudio.js";
 import { isDirectAudioSource } from "../../lib/resolvers.js";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
@@ -93,6 +93,17 @@ export function Player({ online }) {
         });
     }
   }, [currentTrack, sourceType]);
+
+  // Prefetch next track direct URL if it's a direct source to avoid background transition pause in Chrome mobile
+  useEffect(() => {
+    const nextTrack = getNextTrack();
+    if (nextTrack) {
+      const nextSourceType = nextTrack.videoId ? "youtube" : (sourceType === "youtube" ? "preview" : sourceType);
+      if (isDirectAudioSource(nextSourceType)) {
+        prefetchDirectAudioSource(nextTrack, nextSourceType).catch(() => {});
+      }
+    }
+  }, [currentTrack, sourceType, getNextTrack]);
 
   if (!currentTrack) return null;
 

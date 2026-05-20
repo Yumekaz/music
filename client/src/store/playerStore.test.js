@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePlayerStore } from "./playerStore.js";
 
 vi.mock("../lib/directAudio.js", () => ({
-  playDirectAudio: vi.fn(() => Promise.resolve(true))
+  playDirectAudio: vi.fn(() => Promise.resolve(true)),
+  playDirectAudioSync: vi.fn(() => true)
 }));
 
 const track = {

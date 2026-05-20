@@ -9,6 +9,8 @@ export function useMediaSession() {
   const previous = usePlayerStore((state) => state.previous);
   const seek = usePlayerStore((state) => state.seek);
   const setSeekTarget = usePlayerStore((state) => state.setSeekTarget);
+  const positionMs = usePlayerStore((state) => state.positionMs);
+  const durationMs = usePlayerStore((state) => state.durationMs);
 
   // Update Media Session Metadata
   useEffect(() => {
@@ -66,5 +68,29 @@ export function useMediaSession() {
     if ("mediaSession" in navigator) {
       navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentTrack]);
+
+  // Sync position state
+  useEffect(() => {
+    if (!("mediaSession" in navigator) || !("setPositionState" in navigator.mediaSession)) return;
+    if (!currentTrack || !isPlaying) return;
+
+    if (
+      Number.isFinite(durationMs) &&
+      durationMs > 0 &&
+      Number.isFinite(positionMs) &&
+      positionMs >= 0
+    ) {
+      try {
+        const safePosition = Math.max(0, Math.min(positionMs / 1000, durationMs / 1000));
+        navigator.mediaSession.setPositionState({
+          duration: durationMs / 1000,
+          playbackRate: 1.0,
+          position: safePosition
+        });
+      } catch (err) {
+        console.error("Error setting media session position state:", err);
+      }
+    }
+  }, [isPlaying, currentTrack, positionMs, durationMs]);
 }

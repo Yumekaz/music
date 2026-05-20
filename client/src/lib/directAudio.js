@@ -106,8 +106,32 @@ export function setupAudioGraph() {
 // Keep a map of trackId -> objectURL to clean up correctly
 const activeObjectURLs = new Map();
 
+// Cache for resolved direct audio URLs (e.g. object URLs or streaming URLs)
+const resolvedSourceCache = new Map();
+
+// Prefetch next track URL asynchronously in the background so it's ready synchronously
+export async function prefetchDirectAudioSource(track, sourceType) {
+  if (!track || resolvedSourceCache.has(track.id)) return;
+  const src = await getDirectAudioSource(track, sourceType);
+  if (src) {
+    resolvedSourceCache.set(track.id, src);
+  }
+}
+
+// Synchronous version to get source URL if cached, falling back to network URL
+export function getDirectAudioSourceSync(track, sourceType) {
+  if (!track) return "";
+  if (resolvedSourceCache.has(track.id)) {
+    return resolvedSourceCache.get(track.id);
+  }
+  return sourceType === "jamendo" ? track.jamendoUrl || track.previewUrl || "" : track.previewUrl || "";
+}
+
 export async function getDirectAudioSource(track, sourceType) {
   if (!track) return "";
+  if (resolvedSourceCache.has(track.id)) {
+    return resolvedSourceCache.get(track.id);
+  }
 
   try {
     const downloaded = await getDownload(track.id);
@@ -117,21 +141,23 @@ export async function getDirectAudioSource(track, sourceType) {
       }
       const objectURL = URL.createObjectURL(downloaded.blob);
       activeObjectURLs.set(track.id, objectURL);
+      resolvedSourceCache.set(track.id, objectURL);
       return objectURL;
     }
   } catch (err) {
     console.error("Failed to load downloaded track, falling back to remote source", err);
   }
 
-  return sourceType === "jamendo" ? track.jamendoUrl || track.previewUrl || "" : track.previewUrl || "";
+  const src = sourceType === "jamendo" ? track.jamendoUrl || track.previewUrl || "" : track.previewUrl || "";
+  resolvedSourceCache.set(track.id, src);
+  return src;
 }
 
-export async function loadDirectAudio(track, sourceType) {
+export function loadDirectAudioSync(track, sourceType) {
   const audio = getDirectAudioElement();
-  const src = await getDirectAudioSource(track, sourceType);
+  const src = getDirectAudioSourceSync(track, sourceType);
   if (!audio || !src) return null;
 
-  // Make sure graph is instantiated
   setupAudioGraph();
 
   if (audio.src !== src) {
@@ -140,6 +166,34 @@ export async function loadDirectAudio(track, sourceType) {
   }
 
   return audio;
+}
+
+export async function loadDirectAudio(track, sourceType) {
+  const audio = getDirectAudioElement();
+  const src = await getDirectAudioSource(track, sourceType);
+  if (!audio || !src) return null;
+
+  setupAudioGraph();
+
+  if (audio.src !== src) {
+    audio.src = src;
+    audio.load();
+  }
+
+  return audio;
+}
+
+export function playDirectAudioSync(track, sourceType) {
+  const audio = loadDirectAudioSync(track, sourceType);
+  if (!audio) return false;
+
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+
+  audio.play().catch(() => {});
+  return true;
 }
 
 export async function playDirectAudio(track, sourceType) {
