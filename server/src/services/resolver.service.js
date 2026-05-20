@@ -57,7 +57,9 @@ export async function resolveTrack({ title, artist }) {
       previewResult && {
         ...fallback,
         previewUrl: previewResult.previewUrl || fallback.previewUrl,
-        durationMs: previewResult.durationMs || fallback.durationMs
+        durationMs: previewResult.durationMs || fallback.durationMs,
+        artworkUrl: fallback.artworkUrl || previewResult.artworkUrl || "",
+        albumName: fallback.albumName || previewResult.albumName || ""
       },
       jiosaavnResult && {
         ...fallback,
