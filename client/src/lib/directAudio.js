@@ -35,6 +35,11 @@ export function getDirectAudioElement() {
 
 export function getAudioContext() {
   if (typeof window === "undefined" || !window.AudioContext) return null;
+
+  // Detect if mobile browser
+  const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) return null;
+
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
