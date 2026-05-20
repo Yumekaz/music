@@ -7,6 +7,7 @@ import { ToastProvider } from "../common/ToastProvider.jsx";
 import { ShortcutsHelpModal } from "../common/ShortcutsHelpModal.jsx";
 import { useOnlineStatus } from "../../hooks/useOnlineStatus.js";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts.js";
+import { useBackgroundPlayback } from "../../hooks/useBackgroundPlayback.js";
 import { usePlayerStore } from "../../store/playerStore.js";
 
 export function AppShell() {
@@ -17,6 +18,7 @@ export function AppShell() {
   const artworkUrl = currentTrack?.artworkUrl;
 
   useKeyboardShortcuts();
+  useBackgroundPlayback();
 
   return (
     <ToastProvider>

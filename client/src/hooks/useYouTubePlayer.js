@@ -327,5 +327,32 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
     }
   }, [playerB, volume]);
 
+  // 10. Visibility change recovery — resume YouTube after Chrome unfreezes tab
+  useEffect(() => {
+    function handleVisibilityResume() {
+      if (document.visibilityState !== "visible") return;
+
+      const state = usePlayerStore.getState();
+      if (!state.isPlaying || state.sourceType !== "youtube") return;
+
+      const currentActive = activePlayerRef.current === 'A' ? playerA : playerB;
+      if (!currentActive || typeof currentActive.getPlayerState !== "function") return;
+
+      try {
+        const ytState = currentActive.getPlayerState();
+        // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
+        if (ytState === 2 || ytState === -1 || ytState === 5) {
+          // YouTube was paused/frozen by Chrome — resume it
+          currentActive.playVideo();
+        }
+      } catch {
+        // Player might be destroyed or in a bad state after freeze
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityResume);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityResume);
+  }, [playerA, playerB]);
+
   return { containerARef, containerBRef, activePlayer: activePlayerId };
 }
