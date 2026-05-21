@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useSettingsStore } from "../store/settingsStore.js";
+import { getDirectAudioElement, syncAudioStateSync } from "../lib/directAudio.js";
 
 function loadYouTubeAPI() {
   return new Promise((resolve, reject) => {
@@ -103,6 +104,42 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
               useSettingsStore.getState().setYoutubeAvailableQualities(qualities);
             }
           } catch { /* ignore */ }
+
+          // Transition back from background fallback
+          if (window.ytBackgroundFallbackTriggered) {
+            window.ytBackgroundFallbackTriggered = false;
+
+            const audio = getDirectAudioElement();
+            if (audio) {
+              const currentPreviewPos = audio.currentTime;
+              const dur = audio.duration;
+              const loopDur = (dur && !isNaN(dur)) ? dur : 30;
+
+              // Calculate elapsed time in the preview loop since minimization
+              let elapsed = currentPreviewPos - (window.ytMinimizedPreviewPos || 0);
+              if (elapsed < 0 && loopDur > 0) {
+                elapsed += loopDur;
+              }
+              const expectedPos = (window.ytMinimizedYouTubePos || 0) + (elapsed * 1000);
+
+              try {
+                const ytTimeMs = event.target.getCurrentTime() * 1000;
+                const diff = Math.abs(ytTimeMs - expectedPos);
+                console.log(`[useYouTubePlayer] Returning from background fallback. YT time: ${ytTimeMs}ms, Expected: ${expectedPos}ms, Diff: ${diff}ms`);
+
+                // If the desync is more than 300ms, perform a corrective seek to perfectly align with direct audio
+                if (diff > 300) {
+                  event.target.seekTo(expectedPos / 1000, true);
+                }
+              } catch (err) {
+                console.error("[useYouTubePlayer] Failed to query/seek YT player on return:", err);
+              }
+            }
+
+            // Silence/reset direct audio back to silent keep-alive loop
+            const state = usePlayerStore.getState();
+            syncAudioStateSync(state.currentTrack, "youtube", state.isPlaying, state.volume);
+          }
 
           if (pendingPauseRef.current || !storeIsPlaying) {
             pendingPauseRef.current = false;
@@ -365,6 +402,16 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
     document.addEventListener("visibilitychange", handleVisibilityResume);
     return () => document.removeEventListener("visibilitychange", handleVisibilityResume);
   }, [playerA, playerB]);
+
+  // Expose activePlayer globally for background playback transition handling
+  useEffect(() => {
+    window.activeYTPlayer = activePlayer;
+    return () => {
+      if (window.activeYTPlayer === activePlayer) {
+        window.activeYTPlayer = null;
+      }
+    };
+  }, [activePlayer]);
 
   return { containerARef, containerBRef, activePlayer: activePlayerId };
 }

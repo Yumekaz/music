@@ -102,7 +102,19 @@ export function useBackgroundPlayback() {
           state.currentTrack?.previewUrl
         ) {
           fallbackTriggeredRef.current = true;
-          const currentPos = state.positionMs;
+
+          // Get the active YouTube player and pause it immediately to prevent double audio overlay
+          const activePlayer = window.activeYTPlayer;
+          let currentPos = state.positionMs;
+
+          if (activePlayer && typeof activePlayer.getCurrentTime === "function") {
+            try {
+              currentPos = activePlayer.getCurrentTime() * 1000;
+              activePlayer.pauseVideo();
+            } catch (err) {
+              console.error("[useBackgroundPlayback] Failed to pause active YT player:", err);
+            }
+          }
 
           const audio = getDirectAudioElement();
           if (audio) {
@@ -114,9 +126,18 @@ export function useBackgroundPlayback() {
 
             minimizedYouTubePosRef.current = currentPos;
             minimizedPreviewPosRef.current = startPos;
+
+            // Expose globally for the YouTube player state listener
+            window.ytBackgroundFallbackTriggered = true;
+            window.ytMinimizedYouTubePos = currentPos;
+            window.ytMinimizedPreviewPos = startPos;
           } else {
             minimizedYouTubePosRef.current = currentPos;
             minimizedPreviewPosRef.current = (currentPos / 1000) % 30;
+
+            window.ytBackgroundFallbackTriggered = true;
+            window.ytMinimizedYouTubePos = currentPos;
+            window.ytMinimizedPreviewPos = (currentPos / 1000) % 30;
           }
 
           // Trigger state sync to play the direct audio fallback preview at user volume
@@ -139,12 +160,21 @@ export function useBackgroundPlayback() {
             currentPos = minimizedYouTubePosRef.current + (elapsed * 1000);
           }
 
-          // Trigger state sync to set direct audio back to silent keep-alive loop
-          syncAudioStateSync(state.currentTrack, "youtube", state.isPlaying, state.volume);
-
+          // Resume YouTube immediately, seeking to the estimated position.
+          // Note: we do NOT call syncAudioStateSync here to silence direct audio.
+          // We wait until the YouTube player transitions to PLAYING state to avoid a silent buffering gap.
           usePlayerStore.setState({
-            seekTarget: currentPos
+            seekTarget: currentPos + 300 // seek slightly ahead to account for initial buffer delay
           });
+
+          const activePlayer = window.activeYTPlayer;
+          if (activePlayer && typeof activePlayer.playVideo === "function") {
+            try {
+              activePlayer.playVideo();
+            } catch (err) {
+              console.error("[useBackgroundPlayback] Failed to resume active YT player:", err);
+            }
+          }
         } else {
           fallbackTriggeredRef.current = false;
           // When the user returns to the tab, check if our store says "playing"
