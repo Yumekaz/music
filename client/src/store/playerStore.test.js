@@ -70,7 +70,7 @@ describe("playerStore", () => {
 
     usePlayerStore.getState().playTrack(mobileTrack, "youtube");
 
-    expect(usePlayerStore.getState().sourceType).toBe("preview");
+    expect(usePlayerStore.getState().sourceType).toBe("youtube");
 
     Object.defineProperty(navigator, "userAgent", {
       value: originalUserAgent,

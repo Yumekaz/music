@@ -45,12 +45,16 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
     if (!audio) return;
 
     const handleTime = () => {
+      const state = usePlayerStore.getState();
+      if (state.sourceType === "youtube") return;
       const silenceUrl = getSilenceWavUrl();
       if (audio.src === silenceUrl) return;
       onTimeUpdate?.(audio.currentTime * 1000, audio.duration * 1000);
     };
 
     const handleEnded = () => {
+      const state = usePlayerStore.getState();
+      if (state.sourceType === "youtube") return;
       const silenceUrl = getSilenceWavUrl();
       if (audio.src === silenceUrl) return;
       onEnded?.();

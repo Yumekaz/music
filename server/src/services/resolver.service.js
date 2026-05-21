@@ -86,6 +86,27 @@ export async function resolveTrack({ title, artist }) {
       albumName: fallback.albumName
     })[0];
 
+    if (best) {
+      if (previewResult && !best.previewUrl) {
+        best.previewUrl = previewResult.previewUrl;
+      }
+      if (previewResult && (!best.artworkUrl || best.artworkUrl.includes("ytimg"))) {
+        if (previewResult.artworkUrl) {
+          best.artworkUrl = previewResult.artworkUrl;
+        }
+      }
+      if (previewResult && !best.albumName) {
+        best.albumName = previewResult.albumName;
+      }
+      if (jamendoResults?.[0]) {
+        if (!best.jamendoId) best.jamendoId = jamendoResults[0].jamendoId;
+        if (!best.previewUrl) best.previewUrl = jamendoResults[0].previewUrl;
+      }
+      if (jiosaavnResult) {
+        if (!best.artworkUrl) best.artworkUrl = jiosaavnResult.artworkUrl;
+      }
+    }
+
     const links = await getProviderLinks(best);
     return normalizeTrack(best, {
       externalLinks: links,
