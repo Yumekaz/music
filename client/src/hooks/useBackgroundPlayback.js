@@ -164,8 +164,11 @@ export function useBackgroundPlayback() {
 
             // Chrome Android aggressively throttles background network range requests. If we seek the audio element 
             // on minimization, Chrome Android stalls the request, and the song stops completely. 
-            // For other browsers, we seek the audio element to ensure perfect sync.
-            const isChromeAndroid = /Chrome/i.test(navigator.userAgent) && /Android/i.test(navigator.userAgent);
+            // We target this seek-bypass optimization specifically to official Google Chrome on Android.
+            // Other Chromium-based browsers (like Opera, Samsung Internet, Edge) or other engines do not throttle 
+            // background range requests this way and require seeking on minimize to stay in sync.
+            const ua = navigator.userAgent;
+            const isChromeAndroid = /Chrome/i.test(ua) && /Android/i.test(ua) && !/OPR|Opera|SamsungBrowser|EdgA/i.test(ua);
             if (isChromeAndroid && audio.src === targetSrc && audio.readyState >= 1) {
               minimizedYouTubePosRef.current = currentPos;
               minimizedPreviewPosRef.current = audio.currentTime;
