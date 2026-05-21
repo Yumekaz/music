@@ -35,6 +35,26 @@ export function getDirectAudioElement() {
   return directAudioElement;
 }
 
+function normalizeAudioSource(src) {
+  if (!src) return "";
+
+  try {
+    if (typeof window !== "undefined" && window.location?.href) {
+      return new URL(src, window.location.href).href;
+    }
+  } catch {
+    // Fall through to the original value.
+  }
+
+  return src;
+}
+
+export function audioSourceMatches(audio, src) {
+  if (!audio || !src) return false;
+  const activeSrc = audio.currentSrc || audio.src || "";
+  return normalizeAudioSource(activeSrc) === normalizeAudioSource(src);
+}
+
 export function getAudioContext() {
   if (typeof window === "undefined" || !window.AudioContext) return null;
 
@@ -158,7 +178,7 @@ export function loadDirectAudioSync(track, sourceType) {
 
   setupAudioGraph();
 
-  if (audio.src !== src) {
+  if (!audioSourceMatches(audio, src)) {
     audio.src = src;
     audio.load();
   }
@@ -173,7 +193,7 @@ export async function loadDirectAudio(track, sourceType) {
 
   setupAudioGraph();
 
-  if (audio.src !== src) {
+  if (!audioSourceMatches(audio, src)) {
     audio.src = src;
     audio.load();
   }
@@ -332,7 +352,7 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
     if (isPlaying) {
       if (track) {
         const src = getDirectAudioSourceSync(track, sourceType);
-        if (audio.src !== src) {
+        if (!audioSourceMatches(audio, src)) {
           const crossfadeDuration = options.crossfadeDuration || 0;
           const wasYouTube = options.wasYouTube || false;
           if (crossfadeDuration > 0 && !wasYouTube && !audio.paused) {
@@ -373,7 +393,7 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
         ? volume
         : 0.001;
 
-      if (audio.src !== targetSrc) {
+      if (!audioSourceMatches(audio, targetSrc)) {
         setupAudioGraph();
         audio.src = targetSrc;
         audio.loop = true;

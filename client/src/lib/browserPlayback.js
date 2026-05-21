@@ -1,5 +1,9 @@
 const MOBILE_BROWSER_RE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-const CHROME_ANDROID_EXCLUDE_RE = /OPR|Opera|SamsungBrowser|EdgA|Firefox|FxiOS|DuckDuckGo|UCBrowser|MiuiBrowser|HuaweiBrowser|HeyTapBrowser|VivoBrowser/i;
+const CHROME_ANDROID_EXCLUDE_RE = /; wv|Version\/\d|OPR|Opera|SamsungBrowser|EdgA|Firefox|FxiOS|DuckDuckGo|UCBrowser|MiuiBrowser|HuaweiBrowser|HeyTapBrowser|VivoBrowser/i;
+
+const CHROME_BACKGROUND_HANDOFF_KEY = "__musicChromeBackgroundHandoff";
+export const CHROME_RESUME_SEEK_LEAD_MS = 250;
+export const CHROME_HANDOFF_SETTLE_MS = 700;
 
 function getNavigator(navigatorLike) {
   if (navigatorLike) return navigatorLike;
@@ -84,4 +88,78 @@ export function estimateLoopAlignedPositionMs({
   let elapsedMs = currentPreviewMs - anchorPreviewMs;
   if (elapsedMs < 0 && loopMs > 0) elapsedMs += loopMs;
   return Math.max(0, anchorMs + elapsedMs);
+}
+
+export function clampPlaybackPositionMs(positionMs, durationMs = 0) {
+  const position = Math.max(0, finiteNumber(positionMs, 0));
+  const duration = finiteNumber(durationMs, 0);
+
+  if (duration <= 0) return position;
+  return Math.min(position, Math.max(0, duration - 1000));
+}
+
+export function estimateWallClockPositionMs({
+  anchorPositionMs = 0,
+  hiddenAtMs = 0,
+  nowMs = Date.now(),
+  durationMs = 0,
+  leadMs = 0
+} = {}) {
+  const anchor = Math.max(0, finiteNumber(anchorPositionMs, 0));
+  const hiddenAt = finiteNumber(hiddenAtMs, 0);
+  const now = finiteNumber(nowMs, 0);
+  const elapsed = hiddenAt > 0 && now >= hiddenAt ? now - hiddenAt : 0;
+
+  return clampPlaybackPositionMs(anchor + elapsed + finiteNumber(leadMs, 0), durationMs);
+}
+
+export function estimateChromeResumePositionMs(session, options = {}) {
+  if (!session) return 0;
+
+  const wallClockPosition = estimateWallClockPositionMs({
+    anchorPositionMs: session.anchorPositionMs,
+    hiddenAtMs: session.hiddenAtMs,
+    nowMs: options.nowMs,
+    durationMs: session.durationMs,
+    leadMs: options.leadMs || 0
+  });
+
+  if (!Number.isFinite(options.currentPreviewSeconds)) {
+    return wallClockPosition;
+  }
+
+  const loopAlignedPosition = estimateLoopAlignedPositionMs({
+    anchorPositionMs: session.anchorPositionMs,
+    anchorPreviewSeconds: session.anchorPreviewSeconds,
+    currentPreviewSeconds: options.currentPreviewSeconds,
+    loopDurationSeconds: options.loopDurationSeconds || session.loopDurationSeconds,
+    hiddenAtMs: session.hiddenAtMs,
+    nowMs: options.nowMs
+  });
+
+  // The wall clock is the stable YouTube timeline. The preview loop is only a
+  // fallback signal, so never let it pull Chrome back behind elapsed real time.
+  return clampPlaybackPositionMs(
+    Math.max(wallClockPosition, loopAlignedPosition),
+    session.durationMs
+  );
+}
+
+export function setChromeBackgroundHandoff(session) {
+  if (typeof window === "undefined") return null;
+  window[CHROME_BACKGROUND_HANDOFF_KEY] = session;
+  return session;
+}
+
+export function getChromeBackgroundHandoff() {
+  if (typeof window === "undefined") return null;
+  return window[CHROME_BACKGROUND_HANDOFF_KEY] || null;
+}
+
+export function clearChromeBackgroundHandoff(sessionId) {
+  if (typeof window === "undefined") return;
+  const current = window[CHROME_BACKGROUND_HANDOFF_KEY];
+  if (!sessionId || current?.id === sessionId) {
+    delete window[CHROME_BACKGROUND_HANDOFF_KEY];
+  }
 }

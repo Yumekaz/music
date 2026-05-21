@@ -1,9 +1,12 @@
 import { useEffect, useRef } from "react";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useSettingsStore } from "../store/settingsStore.js";
-import { getDirectAudioElement, syncAudioStateSync, getDirectAudioSourceSync } from "../lib/directAudio.js";
+import { audioSourceMatches, getDirectAudioElement, syncAudioStateSync, getDirectAudioSourceSync } from "../lib/directAudio.js";
 import {
-  estimateLoopAlignedPositionMs,
+  CHROME_RESUME_SEEK_LEAD_MS,
+  estimateChromeResumePositionMs,
+  getChromeBackgroundHandoff,
+  setChromeBackgroundHandoff,
   shouldUseChromeAndroidBackgroundFallback
 } from "../lib/browserPlayback.js";
 
@@ -32,9 +35,6 @@ export function useBackgroundPlayback() {
 
   const wakeLockRef = useRef(null);
   const fallbackTriggeredRef = useRef(false);
-  const minimizedYouTubePosRef = useRef(0);
-  const minimizedPreviewPosRef = useRef(0);
-  const minimizedTimeRef = useRef(0);
   const loadedMetadataListenerRef = useRef(null);
 
   // ── 1. Wake Lock ──────────────────────────────────────────────
@@ -107,8 +107,7 @@ export function useBackgroundPlayback() {
           state.currentTrack?.previewUrl
         ) {
           fallbackTriggeredRef.current = true;
-          minimizedTimeRef.current = Date.now();
-          window.ytMinimizedTime = minimizedTimeRef.current;
+          const hiddenAtMs = Date.now();
 
           // Get the active YouTube player and pause it immediately to prevent double audio overlay
           const activePlayer = window.activeYTPlayer;
@@ -134,6 +133,18 @@ export function useBackgroundPlayback() {
           }
 
           const audio = getDirectAudioElement();
+          const fallbackSession = {
+            id: `${state.currentTrack.id}-${hiddenAtMs}`,
+            trackId: state.currentTrack.id,
+            videoId: state.currentTrack.videoId || "",
+            anchorPositionMs: currentPos,
+            anchorPreviewSeconds: 0,
+            loopDurationSeconds: 30,
+            hiddenAtMs,
+            durationMs: state.durationMs || state.currentTrack.durationMs || 0,
+            returnTargetMs: null
+          };
+
           if (audio) {
             // Clean up any existing loadedmetadata listener
             if (loadedMetadataListenerRef.current) {
@@ -153,12 +164,14 @@ export function useBackgroundPlayback() {
                 const startPos = (currentPos / 1000) % loopDur;
 
                 audio.currentTime = startPos;
-                minimizedYouTubePosRef.current = currentPos;
-                minimizedPreviewPosRef.current = startPos;
+                fallbackSession.anchorPreviewSeconds = startPos;
+                fallbackSession.loopDurationSeconds = loopDur;
+                setChromeBackgroundHandoff(fallbackSession);
 
                 window.ytBackgroundFallbackTriggered = true;
                 window.ytMinimizedYouTubePos = currentPos;
                 window.ytMinimizedPreviewPos = startPos;
+                window.ytMinimizedTime = hiddenAtMs;
                 console.log(`[useBackgroundPlayback] Fallback audio seeked to ${startPos}s (duration: ${loopDur}s)`);
               } catch (err) {
                 console.error("[useBackgroundPlayback] Failed to seek fallback audio on load:", err);
@@ -167,13 +180,16 @@ export function useBackgroundPlayback() {
 
             // Chrome Android can stall background range requests if we seek right as the tab is hidden.
             // The foreground sync loop keeps this element close enough, so prefer its current position.
-            if (audio.src === targetSrc && audio.readyState >= 1) {
-              minimizedYouTubePosRef.current = currentPos;
-              minimizedPreviewPosRef.current = audio.currentTime;
+            if (audioSourceMatches(audio, targetSrc) && audio.readyState >= 1) {
+              const dur = audio.duration;
+              fallbackSession.anchorPreviewSeconds = audio.currentTime;
+              fallbackSession.loopDurationSeconds = (dur && !isNaN(dur)) ? dur : 30;
+              setChromeBackgroundHandoff(fallbackSession);
 
               window.ytBackgroundFallbackTriggered = true;
               window.ytMinimizedYouTubePos = currentPos;
               window.ytMinimizedPreviewPos = audio.currentTime;
+              window.ytMinimizedTime = hiddenAtMs;
               console.log(`[useBackgroundPlayback] Background fallback: using already in-sync audio.currentTime = ${audio.currentTime}s`);
             } else {
               loadedMetadataListenerRef.current = applySeek;
@@ -182,27 +198,32 @@ export function useBackgroundPlayback() {
               // Optimistic values in case we return before loadedmetadata fires.
               const loopDur = 30;
               const startPos = (currentPos / 1000) % loopDur;
-              minimizedYouTubePosRef.current = currentPos;
-              minimizedPreviewPosRef.current = startPos;
+              fallbackSession.anchorPreviewSeconds = startPos;
+              fallbackSession.loopDurationSeconds = loopDur;
+              setChromeBackgroundHandoff(fallbackSession);
 
               window.ytBackgroundFallbackTriggered = true;
               window.ytMinimizedYouTubePos = currentPos;
               window.ytMinimizedPreviewPos = startPos;
+              window.ytMinimizedTime = hiddenAtMs;
             }
           } else {
-            minimizedYouTubePosRef.current = currentPos;
-            minimizedPreviewPosRef.current = (currentPos / 1000) % 30;
+            fallbackSession.anchorPreviewSeconds = (currentPos / 1000) % 30;
+            setChromeBackgroundHandoff(fallbackSession);
 
             window.ytBackgroundFallbackTriggered = true;
             window.ytMinimizedYouTubePos = currentPos;
             window.ytMinimizedPreviewPos = (currentPos / 1000) % 30;
+            window.ytMinimizedTime = hiddenAtMs;
           }
 
           // Trigger state sync to play the direct audio fallback preview at user volume
           syncAudioStateSync(state.currentTrack, "youtube", state.isPlaying, state.volume);
         }
       } else if (document.visibilityState === "visible") {
-        if (fallbackTriggeredRef.current) {
+        const fallbackSession = getChromeBackgroundHandoff();
+
+        if (fallbackTriggeredRef.current || fallbackSession) {
           fallbackTriggeredRef.current = false;
 
           const audio = getDirectAudioElement();
@@ -214,19 +235,20 @@ export function useBackgroundPlayback() {
           }
 
           let currentPos = state.positionMs;
-          if (audio) {
-            const dur = audio.duration;
+          if (fallbackSession) {
+            const dur = audio?.duration;
             const loopDur = (dur && !isNaN(dur)) ? dur : 30;
-            currentPos = estimateLoopAlignedPositionMs({
-              anchorPositionMs: minimizedYouTubePosRef.current,
-              anchorPreviewSeconds: minimizedPreviewPosRef.current,
-              currentPreviewSeconds: audio.currentTime,
+            currentPos = estimateChromeResumePositionMs(fallbackSession, {
+              currentPreviewSeconds: audio?.currentTime,
               loopDurationSeconds: loopDur,
-              hiddenAtMs: minimizedTimeRef.current
+              leadMs: CHROME_RESUME_SEEK_LEAD_MS
             });
+            fallbackSession.returnTargetMs = currentPos;
+            fallbackSession.returnStartedAtMs = Date.now();
+            setChromeBackgroundHandoff(fallbackSession);
           }
 
-          // Resume YouTube immediately, seeking to the estimated position.
+          // Resume YouTube immediately, seeking to the wall-clock target.
           // Note: we do NOT call syncAudioStateSync here to silence direct audio.
           // We wait until the YouTube player transitions to PLAYING state to avoid a silent buffering gap.
           usePlayerStore.setState({
@@ -234,9 +256,14 @@ export function useBackgroundPlayback() {
           });
 
           const activePlayer = window.activeYTPlayer;
-          if (activePlayer && typeof activePlayer.playVideo === "function") {
+          if (activePlayer) {
             try {
-              activePlayer.playVideo();
+              if (typeof activePlayer.seekTo === "function") {
+                activePlayer.seekTo(currentPos / 1000, true);
+              }
+              if (typeof activePlayer.playVideo === "function") {
+                activePlayer.playVideo();
+              }
             } catch (err) {
               console.error("[useBackgroundPlayback] Failed to resume active YT player:", err);
             }
@@ -284,12 +311,13 @@ export function useBackgroundPlayback() {
       if (audio.readyState < 1) return;
 
       const drift = Math.abs(audio.currentTime - expectedPreviewPos);
-      // Only sync if drift is significant (> 1.5s) to avoid micro-stuttering in background audio
-      if (drift > 1.5) {
+      // This preview is nearly silent while visible, so keep it tightly aligned
+      // before Chrome hides the tab. That avoids risky background seeks later.
+      if (drift > 0.35) {
         console.log(`[useBackgroundPlayback] Drift detected: ${drift.toFixed(2)}s. Syncing preview currentTime to ${expectedPreviewPos.toFixed(2)}s`);
         audio.currentTime = expectedPreviewPos;
       }
-    }, 1000);
+    }, 500);
 
     return () => clearInterval(interval);
   }, [isPlaying, sourceType, currentTrack]);

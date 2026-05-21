@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { getDirectAudioElement, syncAudioStateSync } from "../lib/directAudio.js";
-import { estimateLoopAlignedPositionMs, isOfficialChromeAndroid } from "../lib/browserPlayback.js";
+import {
+  CHROME_HANDOFF_SETTLE_MS,
+  clearChromeBackgroundHandoff,
+  estimateChromeResumePositionMs,
+  getChromeBackgroundHandoff,
+  isOfficialChromeAndroid
+} from "../lib/browserPlayback.js";
 
 function loadYouTubeAPI() {
   return new Promise((resolve, reject) => {
@@ -106,49 +112,45 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
             }
           } catch { /* ignore */ }
 
-          // Transition back from background fallback
-          if (window.ytBackgroundFallbackTriggered) {
+          // Transition back from Chrome Android background fallback.
+          const canFinishChromeHandoff = document.visibilityState === "visible";
+          const chromeHandoff = canFinishChromeHandoff ? getChromeBackgroundHandoff() : null;
+          if (canFinishChromeHandoff && (chromeHandoff || window.ytBackgroundFallbackTriggered)) {
             window.ytBackgroundFallbackTriggered = false;
 
             const audio = getDirectAudioElement();
-            if (audio) {
+            if (audio && chromeHandoff) {
               const currentPreviewPos = audio.currentTime;
               const dur = audio.duration;
               const loopDur = (dur && !isNaN(dur)) ? dur : 30;
 
-              const minYT = window.ytMinimizedYouTubePos;
-              const minPrev = window.ytMinimizedPreviewPos;
-              const minTime = window.ytMinimizedTime;
-
-              if (typeof minYT === "number" && !isNaN(minYT) && typeof minPrev === "number" && !isNaN(minPrev)) {
-                const expectedPos = estimateLoopAlignedPositionMs({
-                  anchorPositionMs: minYT,
-                  anchorPreviewSeconds: minPrev,
+              const expectedPos = estimateChromeResumePositionMs(chromeHandoff, {
                   currentPreviewSeconds: currentPreviewPos,
-                  loopDurationSeconds: loopDur,
-                  hiddenAtMs: minTime
-                });
+                  loopDurationSeconds: loopDur
+              });
 
-                try {
-                  const ytTimeMs = event.target.getCurrentTime() * 1000;
-                  const diff = Math.abs(ytTimeMs - expectedPos);
-                  console.log(`[useYouTubePlayer] Returning from background fallback. YT time: ${ytTimeMs}ms, Expected: ${expectedPos}ms, Diff: ${diff}ms`);
+              try {
+                const ytTimeMs = event.target.getCurrentTime() * 1000;
+                const diff = Math.abs(ytTimeMs - expectedPos);
+                console.log(`[useYouTubePlayer] Returning from background fallback. YT time: ${ytTimeMs}ms, Expected: ${expectedPos}ms, Diff: ${diff}ms`);
 
-                  // If the desync is more than 300ms, perform a corrective seek to perfectly align with direct audio
-                  if (diff > 300) {
-                    event.target.seekTo(expectedPos / 1000, true);
-                  }
-                } catch (err) {
-                  console.error("[useYouTubePlayer] Failed to query/seek YT player on return:", err);
+                if (diff > 500) {
+                  event.target.seekTo(expectedPos / 1000, true);
                 }
+                usePlayerStore.getState().setPosition(expectedPos);
+              } catch (err) {
+                console.error("[useYouTubePlayer] Failed to query/seek YT player on return:", err);
               }
             }
 
             window.ytMinimizedTime = 0;
 
-            // Silence/reset direct audio back to silent keep-alive loop
-            const state = usePlayerStore.getState();
-            syncAudioStateSync(state.currentTrack, "youtube", state.isPlaying, state.volume);
+            const handoffId = chromeHandoff?.id;
+            window.setTimeout(() => {
+              const state = usePlayerStore.getState();
+              syncAudioStateSync(state.currentTrack, "youtube", state.isPlaying, state.volume);
+              clearChromeBackgroundHandoff(handoffId);
+            }, CHROME_HANDOFF_SETTLE_MS);
           }
 
           if (pendingPauseRef.current || !storeIsPlaying) {
@@ -163,7 +165,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
           const settings = useSettingsStore.getState();
 
-          if (isOfficialChromeAndroid() && settings?.mobileBackgroundFallback && window.ytBackgroundFallbackTriggered) {
+          if (isOfficialChromeAndroid() && settings?.mobileBackgroundFallback && getChromeBackgroundHandoff()) {
             console.log("[useYouTubePlayer] Ignoring YT.PAUSED because mobileBackgroundFallback is active.");
             return;
           }
