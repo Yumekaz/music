@@ -162,10 +162,11 @@ export function useBackgroundPlayback() {
               }
             };
 
-            // If the audio element already has the correct source and metadata loaded, do NOT seek.
-            // It has been kept in sync by our foreground sync loop, so seeking in the background
-            // would only trigger a throttled range request.
-            if (audio.src === targetSrc && audio.readyState >= 1) {
+            // Chrome Android aggressively throttles background network range requests. If we seek the audio element 
+            // on minimization, Chrome Android stalls the request, and the song stops completely. 
+            // For other browsers, we seek the audio element to ensure perfect sync.
+            const isChromeAndroid = /Chrome/i.test(navigator.userAgent) && /Android/i.test(navigator.userAgent);
+            if (isChromeAndroid && audio.src === targetSrc && audio.readyState >= 1) {
               minimizedYouTubePosRef.current = currentPos;
               minimizedPreviewPosRef.current = audio.currentTime;
 
@@ -174,18 +175,24 @@ export function useBackgroundPlayback() {
               window.ytMinimizedPreviewPos = audio.currentTime;
               console.log(`[useBackgroundPlayback] Background fallback: using already in-sync audio.currentTime = ${audio.currentTime}s`);
             } else {
-              loadedMetadataListenerRef.current = applySeek;
-              audio.addEventListener("loadedmetadata", applySeek, { once: true });
+              if (audio.src === targetSrc && audio.readyState >= 1) {
+                // If the audio source is already correct and loaded, apply seek immediately.
+                applySeek();
+              } else {
+                // Otherwise, wait for loadedmetadata before seeking.
+                loadedMetadataListenerRef.current = applySeek;
+                audio.addEventListener("loadedmetadata", applySeek, { once: true });
 
-              // Optimistic values in case we return before loadedmetadata fires
-              const loopDur = 30;
-              const startPos = (currentPos / 1000) % loopDur;
-              minimizedYouTubePosRef.current = currentPos;
-              minimizedPreviewPosRef.current = startPos;
+                // Optimistic values in case we return before loadedmetadata fires
+                const loopDur = 30;
+                const startPos = (currentPos / 1000) % loopDur;
+                minimizedYouTubePosRef.current = currentPos;
+                minimizedPreviewPosRef.current = startPos;
 
-              window.ytBackgroundFallbackTriggered = true;
-              window.ytMinimizedYouTubePos = currentPos;
-              window.ytMinimizedPreviewPos = startPos;
+                window.ytBackgroundFallbackTriggered = true;
+                window.ytMinimizedYouTubePos = currentPos;
+                window.ytMinimizedPreviewPos = startPos;
+              }
             }
           } else {
             minimizedYouTubePosRef.current = currentPos;
