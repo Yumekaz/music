@@ -79,20 +79,42 @@ export function Player({ online }) {
 
       resolveTrack(title, artist)
         .then((resolvedTrack) => {
-          if (resolvedTrack && resolvedTrack.videoId) {
-            usePlayerStore.setState((state) => {
-              if (state.currentTrack?.id === currentTrack.id) {
-                return { currentTrack: { ...state.currentTrack, ...resolvedTrack } };
-              }
-              return state;
-            });
+          if (resolvedTrack) {
+            if (resolvedTrack.videoId) {
+              usePlayerStore.setState((state) => {
+                if (state.currentTrack?.id === currentTrack.id) {
+                  return { currentTrack: { ...state.currentTrack, ...resolvedTrack } };
+                }
+                return state;
+              });
+            } else if (resolvedTrack.previewUrl) {
+              usePlayerStore.setState((state) => {
+                if (state.currentTrack?.id === currentTrack.id) {
+                  return {
+                    currentTrack: { ...state.currentTrack, ...resolvedTrack },
+                    sourceType: "preview",
+                    durationMs: resolvedTrack.durationMs || state.durationMs
+                  };
+                }
+                return state;
+              });
+            } else {
+              // Completely unavailable
+              usePlayerStore.setState((state) => {
+                if (state.currentTrack?.id === currentTrack.id) {
+                  return { isPlaying: false };
+                }
+                return state;
+              });
+              showToast?.("This track is currently unavailable.");
+            }
           }
         })
         .catch((err) => {
           console.warn("Failed to resolve track:", title, artist, err);
         });
     }
-  }, [currentTrack, sourceType]);
+  }, [currentTrack, sourceType, showToast]);
 
   // Prefetch next track direct URL if it's a direct source to avoid background transition pause in Chrome mobile
   useEffect(() => {

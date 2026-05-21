@@ -43,12 +43,14 @@ export async function resolveTrack({ title, artist }) {
 
     const candidates = [
       fallback,
-      ...(youtubeResult || []).map((candidate) => ({
-        ...fallback,
-        ...candidate,
-        title: fallback.title,
-        artistName: fallback.artistName
-      })),
+      ...(youtubeResult || [])
+        .filter((candidate) => !candidate.source?.startsWith("fallback"))
+        .map((candidate) => ({
+          ...fallback,
+          ...candidate,
+          title: fallback.title,
+          artistName: fallback.artistName
+        })),
       mbResult && {
         ...fallback,
         ...mbResult,

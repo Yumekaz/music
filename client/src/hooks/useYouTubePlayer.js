@@ -180,6 +180,8 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
     if (!videoId) {
       if (typeof currentActive.stopVideo === 'function') currentActive.stopVideo();
+      if (currentActiveId === 'A') playerAVideoIdRef.current = "";
+      else playerBVideoIdRef.current = "";
       return;
     }
 
@@ -235,7 +237,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
   // 4. Handle Play/Pause
   useEffect(() => {
     if (activePlayer && typeof activePlayer.playVideo === "function") {
-      if (isPlaying) {
+      if (isPlaying && videoId) {
         pendingPauseRef.current = false;
         activePlayer.playVideo();
       } else {
@@ -243,7 +245,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
         activePlayer.pauseVideo();
       }
     }
-  }, [activePlayer, isPlaying]);
+  }, [activePlayer, isPlaying, videoId]);
 
   // 5. Handle Seek
   useEffect(() => {
