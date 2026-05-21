@@ -30,6 +30,8 @@ export function useBackgroundPlayback() {
   const fallbackTriggeredRef = useRef(false);
   const minimizedYouTubePosRef = useRef(0);
   const minimizedPreviewPosRef = useRef(0);
+  const minimizedTimeRef = useRef(0);
+  const loadedMetadataListenerRef = useRef(null);
 
   // ── 1. Wake Lock ──────────────────────────────────────────────
   useEffect(() => {
@@ -102,6 +104,7 @@ export function useBackgroundPlayback() {
           state.currentTrack?.previewUrl
         ) {
           fallbackTriggeredRef.current = true;
+          minimizedTimeRef.current = Date.now();
 
           // Get the active YouTube player and pause it immediately to prevent double audio overlay
           const activePlayer = window.activeYTPlayer;
@@ -128,40 +131,52 @@ export function useBackgroundPlayback() {
 
           const audio = getDirectAudioElement();
           if (audio) {
-            audio.loop = true;
-            const dur = audio.duration;
-            const loopDur = (dur && !isNaN(dur)) ? dur : 30;
-            const startPos = (currentPos / 1000) % loopDur;
-
-            minimizedYouTubePosRef.current = currentPos;
-            minimizedPreviewPosRef.current = startPos;
-
-            // Expose globally for the YouTube player state listener
-            window.ytBackgroundFallbackTriggered = true;
-            window.ytMinimizedYouTubePos = currentPos;
-            window.ytMinimizedPreviewPos = startPos;
-
-            // Seek safely based on readyState to avoid DOMExceptions
-            if (audio.readyState >= 1) { // HAVE_METADATA or higher
+            // Clean up any existing loadedmetadata listener
+            if (loadedMetadataListenerRef.current) {
               try {
+                audio.removeEventListener("loadedmetadata", loadedMetadataListenerRef.current);
+              } catch (err) {}
+              loadedMetadataListenerRef.current = null;
+            }
+
+            audio.loop = true;
+            const targetSrc = getDirectAudioSourceSync(state.currentTrack, "preview");
+
+            const applySeek = () => {
+              try {
+                const dur = audio.duration;
+                const loopDur = (dur && !isNaN(dur)) ? dur : 30;
+                const startPos = (currentPos / 1000) % loopDur;
+
                 audio.currentTime = startPos;
+                minimizedYouTubePosRef.current = currentPos;
+                minimizedPreviewPosRef.current = startPos;
+
+                window.ytBackgroundFallbackTriggered = true;
+                window.ytMinimizedYouTubePos = currentPos;
+                window.ytMinimizedPreviewPos = startPos;
+                console.log(`[useBackgroundPlayback] Fallback audio seeked to ${startPos}s (duration: ${loopDur}s)`);
               } catch (err) {
-                console.error("[useBackgroundPlayback] Failed to set currentTime on ready audio:", err);
+                console.error("[useBackgroundPlayback] Failed to seek fallback audio on load:", err);
               }
+            };
+
+            // If the audio element already has the correct source and metadata loaded, seek immediately
+            if (audio.src === targetSrc && audio.readyState >= 1) {
+              applySeek();
             } else {
-              const handleLoadedMetadata = () => {
-                try {
-                  const actualDur = audio.duration;
-                  const actualLoopDur = (actualDur && !isNaN(actualDur)) ? actualDur : 30;
-                  const actualStartPos = (currentPos / 1000) % actualLoopDur;
-                  audio.currentTime = actualStartPos;
-                  minimizedPreviewPosRef.current = actualStartPos;
-                  window.ytMinimizedPreviewPos = actualStartPos;
-                } catch (err) {
-                  console.error("[useBackgroundPlayback] Failed to seek on loadedmetadata:", err);
-                }
-              };
-              audio.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true });
+              loadedMetadataListenerRef.current = applySeek;
+              audio.addEventListener("loadedmetadata", applySeek, { once: true });
+
+              // Optimistic values in case we return before loadedmetadata fires
+              const loopDur = 30;
+              const startPos = (currentPos / 1000) % loopDur;
+              minimizedYouTubePosRef.current = currentPos;
+              minimizedPreviewPosRef.current = startPos;
+
+              window.ytBackgroundFallbackTriggered = true;
+              window.ytMinimizedYouTubePos = currentPos;
+              window.ytMinimizedPreviewPos = startPos;
             }
           } else {
             minimizedYouTubePosRef.current = currentPos;
@@ -180,6 +195,13 @@ export function useBackgroundPlayback() {
           fallbackTriggeredRef.current = false;
 
           const audio = getDirectAudioElement();
+          if (audio && loadedMetadataListenerRef.current) {
+            try {
+              audio.removeEventListener("loadedmetadata", loadedMetadataListenerRef.current);
+            } catch (err) {}
+            loadedMetadataListenerRef.current = null;
+          }
+
           let currentPos = state.positionMs;
           if (audio) {
             const dur = audio.duration;
@@ -189,6 +211,25 @@ export function useBackgroundPlayback() {
             if (elapsed < 0 && loopDur > 0) {
               elapsed += loopDur;
             }
+
+            // Adjust elapsed to account for multiple loops using wall-clock time
+            if (loopDur > 0 && minimizedTimeRef.current > 0) {
+              const wallClockElapsed = (Date.now() - minimizedTimeRef.current) / 1000;
+              const expectedLoops = Math.floor(wallClockElapsed / loopDur);
+              let bestElapsed = elapsed;
+              let bestDiff = Math.abs(bestElapsed - wallClockElapsed);
+              
+              for (let i = Math.max(0, expectedLoops - 1); i <= expectedLoops + 1; i++) {
+                const candidate = elapsed + (i * loopDur);
+                const diff = Math.abs(candidate - wallClockElapsed);
+                if (diff < bestDiff) {
+                  bestDiff = diff;
+                  bestElapsed = candidate;
+                }
+              }
+              elapsed = bestElapsed;
+            }
+
             currentPos = minimizedYouTubePosRef.current + (elapsed * 1000);
           }
 
@@ -233,6 +274,13 @@ export function useBackgroundPlayback() {
       if (wakeLockRef.current) {
         wakeLockRef.current.release().catch(() => {});
         wakeLockRef.current = null;
+      }
+      const audio = getDirectAudioElement();
+      if (audio && loadedMetadataListenerRef.current) {
+        try {
+          audio.removeEventListener("loadedmetadata", loadedMetadataListenerRef.current);
+        } catch (err) {}
+        loadedMetadataListenerRef.current = null;
       }
     };
   }, []);
