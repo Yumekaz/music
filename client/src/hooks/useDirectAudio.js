@@ -41,9 +41,9 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
   // Play / pause
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !isDirect) return;
+    if (!audio) return;
 
-    if (isPlaying) {
+    if (isDirect && isPlaying) {
       audio.play().catch(() => {});
     } else {
       audio.pause();
