@@ -320,3 +320,66 @@ export function getSilenceWavUrl() {
     return "";
   }
 }
+
+export function syncAudioStateSync(track, sourceType, isPlaying, volume, options = {}) {
+  if (typeof Audio === "undefined") return;
+  const audio = getDirectAudioElement();
+  if (!audio) return;
+
+  const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isDirect = sourceType === "preview" || sourceType === "jamendo";
+
+  if (isDirect) {
+    audio.loop = false;
+    if (isPlaying) {
+      if (track) {
+        const src = getDirectAudioSourceSync(track, sourceType);
+        if (audio.src !== src) {
+          const crossfadeDuration = options.crossfadeDuration || 0;
+          const wasYouTube = options.wasYouTube || false;
+          if (crossfadeDuration > 0 && !wasYouTube && !audio.paused) {
+            fadeOutAndSwap(track, sourceType, crossfadeDuration, volume);
+          } else {
+            setupAudioGraph();
+            audio.src = src;
+            audio.load();
+            audio.volume = volume;
+            audio.play().catch(() => {});
+          }
+        } else {
+          audio.volume = volume;
+          if (audio.paused) {
+            audio.play().catch(() => {});
+          }
+        }
+      }
+    } else {
+      audio.pause();
+    }
+  } else {
+    // YouTube / silence loop
+    if (isPlaying) {
+      const hasPreview = isMobile && track && (track.previewUrl || track.jamendoUrl);
+      const targetSrc = hasPreview 
+        ? getDirectAudioSourceSync(track, "preview")
+        : getSilenceWavUrl();
+
+      if (audio.src !== targetSrc) {
+        setupAudioGraph();
+        audio.src = targetSrc;
+        audio.loop = true;
+        audio.volume = 0.001;
+        audio.load();
+      } else {
+        audio.volume = 0.001;
+        audio.loop = true;
+      }
+      if (audio.paused) {
+        audio.play().catch(() => {});
+      }
+    } else {
+      audio.pause();
+    }
+  }
+}
+

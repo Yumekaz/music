@@ -1,97 +1,42 @@
 import { useEffect, useRef } from "react";
-import { getDirectAudioElement, loadDirectAudio, loadDirectAudioSync, fadeOutAndSwap, getSilenceWavUrl } from "../lib/directAudio.js";
+import { getDirectAudioElement, syncAudioStateSync, getSilenceWavUrl } from "../lib/directAudio.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 
-export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpdate, onEnded }) {
+export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpdate, onEnded, skipSync = false }) {
   const audioRef = useRef(getDirectAudioElement());
   const isDirect = sourceType === "preview" || sourceType === "jamendo";
   const seekTarget = usePlayerStore((state) => state.seekTarget);
 
-  // Stable refs so track-change effect doesn't re-run on every render
-  const isPlayingRef = useRef(isPlaying);
-  const crossfadeDurationRef = useRef(useSettingsStore.getState().crossfadeDuration);
   const prevSourceTypeRef = useRef(sourceType);
+  const crossfadeDuration = useSettingsStore((state) => state.crossfadeDuration);
 
-  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  // Declarative state synchronization
   useEffect(() => {
-    return useSettingsStore.subscribe(
-      (state) => state.crossfadeDuration,
-      (v) => { crossfadeDurationRef.current = v; }
-    );
-  }, []);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isDirect) {
-      audio.volume = volume;
-    }
-  }, [volume, isDirect]);
-
-  // Track change: use crossfade when playing, plain load when paused
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !isDirect || !track) return;
-
+    if (skipSync) return;
     const wasYouTube = prevSourceTypeRef.current === "youtube";
-
-    if (isPlayingRef.current && crossfadeDurationRef.current > 0 && !wasYouTube) {
-      fadeOutAndSwap(track, sourceType, crossfadeDurationRef.current, volume);
-    } else {
-      loadDirectAudioSync(track, sourceType);
-      audio.volume = volume;
-      if (isPlayingRef.current) {
-        audio.play().catch(() => {});
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDirect, sourceType, track, volume]);
-
-  // Keep prevSourceTypeRef updated
-  useEffect(() => {
+    syncAudioStateSync(track, sourceType, isPlaying, volume, {
+      crossfadeDuration,
+      wasYouTube
+    });
     prevSourceTypeRef.current = sourceType;
-  }, [sourceType]);
-
-  // Play / pause and silence loop handling
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isDirect) {
-      audio.loop = false;
-      if (isPlaying) {
-        audio.play().catch(() => {});
-      } else {
-        audio.pause();
-      }
-    } else {
-      // isDirect is false (YouTube is the active player)
-      if (isPlaying) {
-        const silenceUrl = getSilenceWavUrl();
-        if (audio.src !== silenceUrl) {
-          audio.src = silenceUrl;
-          audio.loop = true;
-          audio.volume = 0.001;
-          audio.load();
-        }
-        audio.play().catch(() => {});
-      } else {
-        const silenceUrl = getSilenceWavUrl();
-        if (audio.src === silenceUrl) {
-          audio.pause();
-        }
-      }
-    }
-  }, [isDirect, isPlaying]);
+  }, [track, sourceType, isPlaying, volume, crossfadeDuration, skipSync]);
 
   // Handle seekTarget
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !isDirect || seekTarget === null) return;
+    if (!audio || seekTarget === null) return;
 
-    audio.currentTime = seekTarget / 1000;
-    usePlayerStore.getState().setSeekTarget(null);
+    const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isDirect) {
+      audio.currentTime = seekTarget / 1000;
+      usePlayerStore.getState().setSeekTarget(null);
+    } else if (isMobile) {
+      const dur = audio.duration;
+      const loopDur = (dur && !isNaN(dur)) ? dur : 30;
+      audio.currentTime = (seekTarget / 1000) % loopDur;
+    }
   }, [isDirect, seekTarget]);
 
   // Event listeners
@@ -124,4 +69,5 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
 
   return audioRef;
 }
+
 

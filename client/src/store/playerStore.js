@@ -1,10 +1,19 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { playDirectAudio, playDirectAudioSync } from "../lib/directAudio.js";
+import { playDirectAudio, playDirectAudioSync, syncAudioStateSync, getDirectAudioElement } from "../lib/directAudio.js";
 import { getRecommendations } from "../services/search.js";
+import { useSettingsStore } from "./settingsStore.js";
 
 function resolveSourceType(track, sourceType) {
   if (sourceType === "youtube" && !track?.videoId && track?.previewUrl) return "preview";
+
+  const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isHidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+  const settings = useSettingsStore.getState();
+  if (isMobile && isHidden && settings?.mobileBackgroundFallback && sourceType === "youtube" && track?.previewUrl) {
+    return "preview";
+  }
+
   return sourceType;
 }
 
@@ -46,10 +55,9 @@ export const usePlayerStore = create(
 
       playTrack: (track, sourceType = "youtube") => {
         const resolvedSourceType = resolveSourceType(track, sourceType);
+        const { volume } = get();
 
-        if (isDirectSource(resolvedSourceType)) {
-          playDirectAudioSync(track, resolvedSourceType);
-        }
+        syncAudioStateSync(track, resolvedSourceType, true, volume);
 
         set({
           currentTrack: track,
@@ -59,19 +67,37 @@ export const usePlayerStore = create(
           durationMs: track?.durationMs || 0
         });
       },
-      pause: () => set({ isPlaying: false }),
-      resume: () => set(({ currentTrack }) => ({ isPlaying: Boolean(currentTrack) })),
+      pause: () => {
+        const { currentTrack, sourceType, volume } = get();
+        syncAudioStateSync(currentTrack, sourceType, false, volume);
+        set({ isPlaying: false });
+      },
+      resume: () => {
+        const { currentTrack, sourceType, volume } = get();
+        if (currentTrack) {
+          syncAudioStateSync(currentTrack, sourceType, true, volume);
+        }
+        set(({ currentTrack }) => ({ isPlaying: Boolean(currentTrack) }));
+      },
       toggleShortcutsHelp: () => set((state) => ({ shortcutsHelpOpen: !state.shortcutsHelpOpen })),
       setShortcutsHelpOpen: (open) => set({ shortcutsHelpOpen: open }),
       togglePlay: () => {
-        const { currentTrack, isPlaying } = get();
-        set({ isPlaying: Boolean(currentTrack) && !isPlaying });
+        const { currentTrack, isPlaying, sourceType, volume } = get();
+        const nextPlaying = Boolean(currentTrack) && !isPlaying;
+        if (currentTrack) {
+          syncAudioStateSync(currentTrack, sourceType, nextPlaying, volume);
+        }
+        set({ isPlaying: nextPlaying });
       },
       seek: (positionMs) => set({ positionMs }),
       setPosition: (positionMs) => set({ positionMs }),
       setSeekTarget: (seekTarget) => set({ seekTarget }),
       setDuration: (durationMs) => set({ durationMs }),
-      setVolume: (volume) => set({ volume }),
+      setVolume: (volume) => {
+        set({ volume });
+        const { currentTrack, sourceType, isPlaying } = get();
+        syncAudioStateSync(currentTrack, sourceType, isPlaying, volume);
+      },
       setBuffering: (isBuffering) => set({ isBuffering }),
 
       setQueue: (queue) => set({ queue }),
@@ -115,6 +141,10 @@ export const usePlayerStore = create(
         if (repeat === "one") {
           get().setSeekTarget(0);
           set({ positionMs: 0, isPlaying: true });
+          if (typeof Audio !== "undefined") {
+            const audio = getDirectAudioElement();
+            if (audio) audio.currentTime = 0;
+          }
           return;
         }
 
@@ -157,6 +187,10 @@ export const usePlayerStore = create(
         if (positionMs > 3000) {
           get().setSeekTarget(0);
           set({ positionMs: 0 });
+          if (typeof Audio !== "undefined") {
+            const audio = getDirectAudioElement();
+            if (audio) audio.currentTime = 0;
+          }
           return;
         }
 

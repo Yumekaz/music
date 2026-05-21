@@ -3,7 +3,9 @@ import { usePlayerStore } from "./playerStore.js";
 
 vi.mock("../lib/directAudio.js", () => ({
   playDirectAudio: vi.fn(() => Promise.resolve(true)),
-  playDirectAudioSync: vi.fn(() => true)
+  playDirectAudioSync: vi.fn(() => true),
+  syncAudioStateSync: vi.fn(),
+  getDirectAudioElement: vi.fn(() => null)
 }));
 
 const track = {
@@ -38,6 +40,43 @@ describe("playerStore", () => {
 
     expect(usePlayerStore.getState().sourceType).toBe("preview");
     expect(usePlayerStore.getState().isPlaying).toBe(true);
+  });
+
+  it("resolves to preview in background on mobile when mobileBackgroundFallback is enabled", () => {
+    const originalUserAgent = navigator.userAgent;
+    Object.defineProperty(navigator, "userAgent", {
+      value: "Android Mobile",
+      writable: true,
+      configurable: true
+    });
+
+    const originalVisibilityState = document.visibilityState;
+    Object.defineProperty(document, "visibilityState", {
+      value: "hidden",
+      writable: true,
+      configurable: true
+    });
+
+    const mobileTrack = {
+      ...track,
+      videoId: "some-video-id",
+      previewUrl: "/api/audio/preview/track-blinding-lights"
+    };
+
+    usePlayerStore.getState().playTrack(mobileTrack, "youtube");
+
+    expect(usePlayerStore.getState().sourceType).toBe("preview");
+
+    Object.defineProperty(navigator, "userAgent", {
+      value: originalUserAgent,
+      writable: true,
+      configurable: true
+    });
+    Object.defineProperty(document, "visibilityState", {
+      value: originalVisibilityState,
+      writable: true,
+      configurable: true
+    });
   });
 
   it("advances through the queue", () => {

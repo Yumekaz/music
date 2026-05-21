@@ -44,7 +44,8 @@ export default function NowPlaying() {
       setPosition(position);
       setDuration(duration);
     },
-    onEnded: next
+    onEnded: next,
+    skipSync: true
   });
 
   const dominantColor = useColorExtract(currentTrack?.artworkUrl);

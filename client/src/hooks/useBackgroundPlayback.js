@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useSettingsStore } from "../store/settingsStore.js";
-import { getDirectAudioElement, pauseDirectAudio } from "../lib/directAudio.js";
+import { getDirectAudioElement, pauseDirectAudio, syncAudioStateSync } from "../lib/directAudio.js";
 
 /**
  * Chrome Android aggressively throttles / freezes background tabs.
@@ -28,6 +28,8 @@ export function useBackgroundPlayback() {
 
   const wakeLockRef = useRef(null);
   const fallbackTriggeredRef = useRef(false);
+  const minimizedYouTubePosRef = useRef(0);
+  const minimizedPreviewPosRef = useRef(0);
 
   // ── 1. Wake Lock ──────────────────────────────────────────────
   useEffect(() => {
@@ -86,32 +88,6 @@ export function useBackgroundPlayback() {
   // Automatically switch to audio preview if browser is minimized on mobile,
   // and recover when returning to the tab.
   useEffect(() => {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const settings = useSettingsStore.getState();
-
-    if (document.visibilityState === "hidden") {
-      if (
-        isMobile &&
-        settings.mobileBackgroundFallback &&
-        isPlaying &&
-        sourceType === "youtube" &&
-        currentTrack?.previewUrl
-      ) {
-        fallbackTriggeredRef.current = true;
-        const currentPos = usePlayerStore.getState().positionMs;
-        usePlayerStore.setState({
-          sourceType: "preview",
-          seekTarget: currentPos
-        });
-      }
-    } else {
-      if (sourceType === "youtube") {
-        fallbackTriggeredRef.current = false;
-      }
-    }
-  }, [isPlaying, sourceType, currentTrack]);
-
-  useEffect(() => {
     function handleVisibilityChange() {
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const settings = useSettingsStore.getState();
@@ -127,6 +103,23 @@ export function useBackgroundPlayback() {
         ) {
           fallbackTriggeredRef.current = true;
           const currentPos = state.positionMs;
+
+          const audio = getDirectAudioElement();
+          if (audio) {
+            audio.loop = true;
+            const dur = audio.duration;
+            const loopDur = (dur && !isNaN(dur)) ? dur : 30;
+            const startPos = (currentPos / 1000) % loopDur;
+            audio.currentTime = startPos;
+            audio.volume = state.volume;
+
+            minimizedYouTubePosRef.current = currentPos;
+            minimizedPreviewPosRef.current = startPos;
+          } else {
+            minimizedYouTubePosRef.current = currentPos;
+            minimizedPreviewPosRef.current = (currentPos / 1000) % 30;
+          }
+
           usePlayerStore.setState({
             sourceType: "preview",
             seekTarget: currentPos
@@ -135,17 +128,28 @@ export function useBackgroundPlayback() {
       } else if (document.visibilityState === "visible") {
         if (fallbackTriggeredRef.current) {
           fallbackTriggeredRef.current = false;
-          
+
           const audio = getDirectAudioElement();
-          const currentPos = audio ? audio.currentTime * 1000 : state.positionMs;
-          
+          let currentPos = state.positionMs;
+          if (audio) {
+            const dur = audio.duration;
+            const loopDur = (dur && !isNaN(dur)) ? dur : 30;
+            const currentPreviewPos = audio.currentTime;
+            let elapsed = currentPreviewPos - minimizedPreviewPosRef.current;
+            if (elapsed < 0 && loopDur > 0) {
+              elapsed += loopDur;
+            }
+            currentPos = minimizedYouTubePosRef.current + (elapsed * 1000);
+          }
+
           pauseDirectAudio();
-          
+
           usePlayerStore.setState({
             sourceType: "youtube",
             seekTarget: currentPos
           });
         } else {
+          fallbackTriggeredRef.current = false;
           // When the user returns to the tab, check if our store says "playing"
           // but the actual media has been paused by Chrome's freezer.
           if (!state.isPlaying || !state.currentTrack) return;
