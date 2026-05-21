@@ -1,6 +1,12 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Try loading from root/current directory first, then fallback to server/.env relative to this file
 dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
