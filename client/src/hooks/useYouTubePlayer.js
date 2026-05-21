@@ -113,6 +113,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
         if (event.data === YT.PAUSED) {
           usePlayerStore.getState().setBuffering(false);
           pendingPauseRef.current = false;
+          if (usePlayerStore.getState().sourceType !== "youtube") return;
           if (storeIsPlaying) pause();
         }
 

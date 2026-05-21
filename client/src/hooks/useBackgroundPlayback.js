@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { usePlayerStore } from "../store/playerStore.js";
-import { getDirectAudioElement } from "../lib/directAudio.js";
+import { useSettingsStore } from "../store/settingsStore.js";
+import { getDirectAudioElement, pauseDirectAudio } from "../lib/directAudio.js";
 
 /**
  * Chrome Android aggressively throttles / freezes background tabs.
@@ -82,30 +83,86 @@ export function useBackgroundPlayback() {
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [isPlaying, currentTrack]);
 
-  // ── 2. Visibility change recovery ─────────────────────────────
-  // When the user returns to the tab, check if our store says "playing"
-  // but the actual media has been paused by Chrome's freezer.
+  // ── 2. Visibility change & Background playback logic ───────────
+  // Automatically switch to audio preview if browser is minimized on mobile,
+  // and recover when returning to the tab.
   useEffect(() => {
-    function handleResume() {
-      if (document.visibilityState !== "visible") return;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const settings = useSettingsStore.getState();
 
+    if (document.visibilityState === "hidden") {
+      if (
+        isMobile &&
+        settings.mobileBackgroundFallback &&
+        isPlaying &&
+        sourceType === "youtube" &&
+        currentTrack?.previewUrl
+      ) {
+        fallbackTriggeredRef.current = true;
+        const currentPos = usePlayerStore.getState().positionMs;
+        usePlayerStore.setState({
+          sourceType: "preview",
+          seekTarget: currentPos
+        });
+      }
+    } else {
+      if (sourceType === "youtube") {
+        fallbackTriggeredRef.current = false;
+      }
+    }
+  }, [isPlaying, sourceType, currentTrack]);
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const settings = useSettingsStore.getState();
       const state = usePlayerStore.getState();
-      if (!state.isPlaying || !state.currentTrack) return;
 
-      if (state.sourceType === "preview" || state.sourceType === "jamendo") {
-        // Direct audio — poke the <audio> element to resume
-        const audio = getDirectAudioElement();
-        if (audio && audio.paused && audio.src) {
-          audio.play().catch(() => {});
+      if (document.visibilityState === "hidden") {
+        if (
+          isMobile &&
+          settings.mobileBackgroundFallback &&
+          state.isPlaying &&
+          state.sourceType === "youtube" &&
+          state.currentTrack?.previewUrl
+        ) {
+          fallbackTriggeredRef.current = true;
+          const currentPos = state.positionMs;
+          usePlayerStore.setState({
+            sourceType: "preview",
+            seekTarget: currentPos
+          });
+        }
+      } else if (document.visibilityState === "visible") {
+        if (fallbackTriggeredRef.current) {
+          fallbackTriggeredRef.current = false;
+          
+          const audio = getDirectAudioElement();
+          const currentPos = audio ? audio.currentTime * 1000 : state.positionMs;
+          
+          pauseDirectAudio();
+          
+          usePlayerStore.setState({
+            sourceType: "youtube",
+            seekTarget: currentPos
+          });
+        } else {
+          // When the user returns to the tab, check if our store says "playing"
+          // but the actual media has been paused by Chrome's freezer.
+          if (!state.isPlaying || !state.currentTrack) return;
+
+          if (state.sourceType === "preview" || state.sourceType === "jamendo") {
+            const audio = getDirectAudioElement();
+            if (audio && audio.paused && audio.src) {
+              audio.play().catch(() => {});
+            }
+          }
         }
       }
-      // For YouTube, the iframe's onStateChange handler will fire a PAUSED
-      // event which syncs the store. The user will need to tap play, or
-      // auto-resume kicks in via the YouTube player API.
     }
 
-    document.addEventListener("visibilitychange", handleResume);
-    return () => document.removeEventListener("visibilitychange", handleResume);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   // ── 3. Silent audio keepalive for YouTube source ──────────────

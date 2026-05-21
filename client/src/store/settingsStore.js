@@ -24,6 +24,10 @@ export const useSettingsStore = create(
       youtubeAvailableQualities: [],
       setPlaybackQuality: (playbackQuality) => set({ playbackQuality }),
       setYoutubeAvailableQualities: (youtubeAvailableQualities) => set({ youtubeAvailableQualities }),
+
+      // Mobile Chrome/Safari background playback fallback
+      mobileBackgroundFallback: true,
+      setMobileBackgroundFallback: (mobileBackgroundFallback) => set({ mobileBackgroundFallback }),
     }),
     {
       name: "music-app-settings",
@@ -33,6 +37,7 @@ export const useSettingsStore = create(
         equalizerGains: state.equalizerGains,
         crossfadeDuration: state.crossfadeDuration,
         playbackQuality: state.playbackQuality,
+        mobileBackgroundFallback: state.mobileBackgroundFallback,
       }),
     }
   )

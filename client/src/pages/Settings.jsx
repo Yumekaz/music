@@ -33,6 +33,7 @@ export default function Settings() {
     playbackQuality,     setPlaybackQuality,
     equalizerPreset,     equalizerGains, equalizerOpen,
     setBandGain,         setEqualizerPreset, setEqualizerOpen,
+    mobileBackgroundFallback, setMobileBackgroundFallback,
   } = useSettingsStore();
 
   const sourceType = usePlayerStore((state) => state.sourceType);
@@ -94,6 +95,24 @@ export default function Settings() {
                 <span>12s</span>
               </div>
             </div>
+          </div>
+
+          <div className="settings-row settings-row--compact" style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid var(--border-color)" }}>
+            <div className="settings-row-label">
+              <p>Mobile Background Playback</p>
+              <span>
+                Automatically switch to audio previews when the browser is minimized on mobile. Keeps your music playing without stopping.
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={mobileBackgroundFallback}
+              className={`toggle-switch ${mobileBackgroundFallback ? "on" : ""}`}
+              onClick={() => setMobileBackgroundFallback(!mobileBackgroundFallback)}
+            >
+              <span className="toggle-thumb" />
+            </button>
           </div>
         </div>
       </section>
