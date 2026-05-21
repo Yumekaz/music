@@ -279,3 +279,44 @@ export async function fadeOutAndSwap(track, sourceType, durationSecs, targetVolu
     }
   }, stepMs);
 }
+
+let silenceWavUrl = null;
+
+export function getSilenceWavUrl() {
+  if (silenceWavUrl) return silenceWavUrl;
+
+  try {
+    const sampleRate = 8000; // Lower sample rate for smaller size
+    const numSamples = sampleRate; // 1 second
+    const buffer = new ArrayBuffer(44 + numSamples * 2);
+    const view = new DataView(buffer);
+
+    const writeString = (offset, str) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + numSamples * 2, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, "data");
+    view.setUint32(40, numSamples * 2, true);
+
+    for (let i = 0; i < numSamples; i++) {
+      view.setInt16(44 + i * 2, 1, true);
+    }
+
+    const blob = new Blob([buffer], { type: "audio/wav" });
+    silenceWavUrl = URL.createObjectURL(blob);
+    return silenceWavUrl;
+  } catch (err) {
+    console.error("Failed to generate silence WAV", err);
+    return "";
+  }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { getDirectAudioElement, loadDirectAudio, loadDirectAudioSync, fadeOutAndSwap } from "../lib/directAudio.js";
+import { getDirectAudioElement, loadDirectAudio, loadDirectAudioSync, fadeOutAndSwap, getSilenceWavUrl } from "../lib/directAudio.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 
@@ -11,6 +11,8 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
   // Stable refs so track-change effect doesn't re-run on every render
   const isPlayingRef = useRef(isPlaying);
   const crossfadeDurationRef = useRef(useSettingsStore.getState().crossfadeDuration);
+  const prevSourceTypeRef = useRef(sourceType);
+
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
   useEffect(() => {
     return useSettingsStore.subscribe(
@@ -22,31 +24,64 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.volume = volume;
-  }, [volume]);
+    if (isDirect) {
+      audio.volume = volume;
+    }
+  }, [volume, isDirect]);
 
   // Track change: use crossfade when playing, plain load when paused
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !isDirect || !track) return;
 
-    if (isPlayingRef.current && crossfadeDurationRef.current > 0) {
+    const wasYouTube = prevSourceTypeRef.current === "youtube";
+
+    if (isPlayingRef.current && crossfadeDurationRef.current > 0 && !wasYouTube) {
       fadeOutAndSwap(track, sourceType, crossfadeDurationRef.current, volume);
     } else {
       loadDirectAudioSync(track, sourceType);
+      audio.volume = volume;
+      if (isPlayingRef.current) {
+        audio.play().catch(() => {});
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDirect, sourceType, track, volume]);
 
-  // Play / pause
+  // Keep prevSourceTypeRef updated
+  useEffect(() => {
+    prevSourceTypeRef.current = sourceType;
+  }, [sourceType]);
+
+  // Play / pause and silence loop handling
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isDirect && isPlaying) {
-      audio.play().catch(() => {});
+    if (isDirect) {
+      audio.loop = false;
+      if (isPlaying) {
+        audio.play().catch(() => {});
+      } else {
+        audio.pause();
+      }
     } else {
-      audio.pause();
+      // isDirect is false (YouTube is the active player)
+      if (isPlaying) {
+        const silenceUrl = getSilenceWavUrl();
+        if (audio.src !== silenceUrl) {
+          audio.src = silenceUrl;
+          audio.loop = true;
+          audio.volume = 0.001;
+          audio.load();
+        }
+        audio.play().catch(() => {});
+      } else {
+        const silenceUrl = getSilenceWavUrl();
+        if (audio.src === silenceUrl) {
+          audio.pause();
+        }
+      }
     }
   }, [isDirect, isPlaying]);
 
@@ -64,8 +99,17 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleTime = () => onTimeUpdate?.(audio.currentTime * 1000, audio.duration * 1000);
-    const handleEnded = () => onEnded?.();
+    const handleTime = () => {
+      const silenceUrl = getSilenceWavUrl();
+      if (audio.src === silenceUrl) return;
+      onTimeUpdate?.(audio.currentTime * 1000, audio.duration * 1000);
+    };
+
+    const handleEnded = () => {
+      const silenceUrl = getSilenceWavUrl();
+      if (audio.src === silenceUrl) return;
+      onEnded?.();
+    };
 
     audio.addEventListener("timeupdate", handleTime);
     audio.addEventListener("loadedmetadata", handleTime);
@@ -80,3 +124,4 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
 
   return audioRef;
 }
+
