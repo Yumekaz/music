@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useSettingsStore } from "../store/settingsStore.js";
-import { getDirectAudioElement, pauseDirectAudio, syncAudioStateSync } from "../lib/directAudio.js";
+import { getDirectAudioElement, pauseDirectAudio, syncAudioStateSync, getDirectAudioSourceSync } from "../lib/directAudio.js";
 
 /**
  * Chrome Android aggressively throttles / freezes background tabs.
@@ -161,9 +161,17 @@ export function useBackgroundPlayback() {
               }
             };
 
-            // If the audio element already has the correct source and metadata loaded, seek immediately
+            // If the audio element already has the correct source and metadata loaded, do NOT seek.
+            // It has been kept in sync by our foreground sync loop, so seeking in the background
+            // would only trigger a throttled range request.
             if (audio.src === targetSrc && audio.readyState >= 1) {
-              applySeek();
+              minimizedYouTubePosRef.current = currentPos;
+              minimizedPreviewPosRef.current = audio.currentTime;
+
+              window.ytBackgroundFallbackTriggered = true;
+              window.ytMinimizedYouTubePos = currentPos;
+              window.ytMinimizedPreviewPos = audio.currentTime;
+              console.log(`[useBackgroundPlayback] Background fallback: using already in-sync audio.currentTime = ${audio.currentTime}s`);
             } else {
               loadedMetadataListenerRef.current = applySeek;
               audio.addEventListener("loadedmetadata", applySeek, { once: true });
@@ -267,6 +275,40 @@ export function useBackgroundPlayback() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
+
+  // ── 3. Foreground sync loop ───────────────────────────────────
+  // Keeps the silent preview audio element in sync with the YouTube player
+  // while the page is visible, so that when the app is minimized, the audio
+  // is already at the correct position and does not need to seek in the background.
+  useEffect(() => {
+    if (document.visibilityState !== "visible") return;
+    if (!isPlaying || sourceType !== "youtube" || !currentTrack) return;
+
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!isMobile || !(currentTrack.previewUrl || currentTrack.jamendoUrl)) return;
+
+    const audio = getDirectAudioElement();
+    if (!audio) return;
+
+    const interval = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+
+      const dur = audio.duration;
+      const loopDur = (dur && !isNaN(dur)) ? dur : 30;
+      const expectedPreviewPos = (usePlayerStore.getState().positionMs / 1000) % loopDur;
+
+      if (audio.readyState < 1) return;
+
+      const drift = Math.abs(audio.currentTime - expectedPreviewPos);
+      // Only sync if drift is significant (> 1.5s) to avoid micro-stuttering in background audio
+      if (drift > 1.5) {
+        console.log(`[useBackgroundPlayback] Drift detected: ${drift.toFixed(2)}s. Syncing preview currentTime to ${expectedPreviewPos.toFixed(2)}s`);
+        audio.currentTime = expectedPreviewPos;
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, sourceType, currentTrack]);
 
   // Cleanup on unmount
   useEffect(() => {
