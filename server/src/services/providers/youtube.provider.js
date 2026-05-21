@@ -22,6 +22,10 @@ function fallbackResult(track) {
   };
 }
 
+function fixtureResults(query, limit) {
+  return searchFixtureTracks(query, limit).map(fallbackResult);
+}
+
 async function scrapeYouTube(query, limit = 8) {
   try {
     const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song official audio')}`;
@@ -117,9 +121,11 @@ async function scrapeYouTube(query, limit = 8) {
 
 export async function searchYouTube(query, limit = 8) {
   if (!env.youtubeApiKey) {
+    if (env.nodeEnv === "test") return fixtureResults(query, limit);
+
     const scraped = await scrapeYouTube(query, limit);
     if (scraped.length > 0) return scraped;
-    return searchFixtureTracks(query, limit).map(fallbackResult);
+    return fixtureResults(query, limit);
   }
 
   const params = new URLSearchParams({
@@ -136,9 +142,11 @@ export async function searchYouTube(query, limit = 8) {
   
   if (!ids.length) {
     // API failed or returned empty results (e.g. 403 Forbidden). Try to scrape instead!
+    if (env.nodeEnv === "test") return fixtureResults(query, limit);
+
     const scraped = await scrapeYouTube(query, limit);
     if (scraped.length > 0) return scraped;
-    return searchFixtureTracks(query, limit).map(fallbackResult);
+    return fixtureResults(query, limit);
   }
 
   const detailParams = new URLSearchParams({

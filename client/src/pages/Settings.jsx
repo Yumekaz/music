@@ -101,7 +101,7 @@ export default function Settings() {
             <div className="settings-row-label">
               <p>Mobile Background Playback</p>
               <span>
-                Automatically switch to audio previews when the browser is minimized on mobile. Keeps your music playing without stopping.
+                Uses audio previews only on Chrome Android when the browser is minimized.
               </span>
             </div>
             <button

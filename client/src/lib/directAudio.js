@@ -1,5 +1,6 @@
 import { getDownload } from "./idb.js";
 import { useSettingsStore } from "../store/settingsStore.js";
+import { isMobileBrowser, shouldUseChromeAndroidBackgroundFallback } from "./browserPlayback.js";
 
 let directAudioElement = null;
 let fadeTimer = null;
@@ -37,9 +38,7 @@ export function getDirectAudioElement() {
 export function getAudioContext() {
   if (typeof window === "undefined" || !window.AudioContext) return null;
 
-  // Detect if mobile browser
-  const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  if (isMobile) return null;
+  if (isMobileBrowser()) return null;
 
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -60,9 +59,7 @@ export function getBiquadFilters() {
 export function setupAudioGraph() {
   if (isAudioGraphSetup) return;
 
-  // Detect if mobile browser
-  const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  if (isMobile) {
+  if (isMobileBrowser()) {
     console.log("[directAudio] Mobile browser detected; bypassing AudioContext graph for background playback support.");
     return;
   }
@@ -327,7 +324,7 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
   const audio = getDirectAudioElement();
   if (!audio) return;
 
-  const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const chromeBackgroundFallback = shouldUseChromeAndroidBackgroundFallback(useSettingsStore.getState());
   const isDirect = sourceType === "preview" || sourceType === "jamendo";
 
   if (isDirect) {
@@ -360,15 +357,19 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
   } else {
     // YouTube / silence loop
     if (isPlaying) {
-      const hasPreview = isMobile && track && (track.previewUrl || track.jamendoUrl);
+      if (!chromeBackgroundFallback) {
+        audio.pause();
+        return;
+      }
+
+      const hasPreview = track && (track.previewUrl || track.jamendoUrl);
       const targetSrc = hasPreview 
         ? getDirectAudioSourceSync(track, "preview")
         : getSilenceWavUrl();
 
       // Dynamic Fallback Volume: play fallback preview at user volume when hidden, else keep-alive silent
       const isHidden = typeof document !== "undefined" && document.visibilityState === "hidden";
-      const settings = useSettingsStore.getState();
-      const targetVolume = (isMobile && isHidden && settings?.mobileBackgroundFallback && hasPreview)
+      const targetVolume = (isHidden && hasPreview)
         ? volume
         : 0.001;
 
@@ -390,4 +391,3 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
     }
   }
 }
-

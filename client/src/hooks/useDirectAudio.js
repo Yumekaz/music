@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { getDirectAudioElement, syncAudioStateSync, getSilenceWavUrl } from "../lib/directAudio.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
+import { isOfficialChromeAndroid } from "../lib/browserPlayback.js";
 
 export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpdate, onEnded, skipSync = false }) {
   const audioRef = useRef(getDirectAudioElement());
@@ -27,12 +28,10 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
     const audio = audioRef.current;
     if (!audio || seekTarget === null) return;
 
-    const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
     if (isDirect) {
       audio.currentTime = seekTarget / 1000;
       usePlayerStore.getState().setSeekTarget(null);
-    } else if (isMobile) {
+    } else if (isOfficialChromeAndroid()) {
       const dur = audio.duration;
       const loopDur = (dur && !isNaN(dur)) ? dur : 30;
       audio.currentTime = (seekTarget / 1000) % loopDur;
@@ -73,5 +72,4 @@ export function useDirectAudio({ track, sourceType, isPlaying, volume, onTimeUpd
 
   return audioRef;
 }
-
 

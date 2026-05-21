@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { playDirectAudio, playDirectAudioSync, syncAudioStateSync, getDirectAudioElement } from "../lib/directAudio.js";
+import { shouldUseChromeAndroidBackgroundFallback } from "../lib/browserPlayback.js";
 import { getRecommendations } from "../services/search.js";
 import { resolveTrack } from "../services/tracks.js";
 import { useSettingsStore } from "./settingsStore.js";
@@ -47,14 +48,13 @@ export const usePlayerStore = create(
       },
 
       playTrack: async (track, sourceType = "youtube") => {
-        const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const settings = useSettingsStore.getState();
+        const chromeBackgroundFallback = shouldUseChromeAndroidBackgroundFallback(settings);
         const { volume } = get();
 
         let trackWithPreview = track;
         if (
-          isMobile &&
-          settings?.mobileBackgroundFallback &&
+          chromeBackgroundFallback &&
           sourceType === "youtube" &&
           !track.previewUrl
         ) {

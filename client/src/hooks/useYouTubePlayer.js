@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { getDirectAudioElement, syncAudioStateSync } from "../lib/directAudio.js";
+import { estimateLoopAlignedPositionMs, isOfficialChromeAndroid } from "../lib/browserPlayback.js";
 
 function loadYouTubeAPI() {
   return new Promise((resolve, reject) => {
@@ -120,31 +121,13 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
               const minTime = window.ytMinimizedTime;
 
               if (typeof minYT === "number" && !isNaN(minYT) && typeof minPrev === "number" && !isNaN(minPrev)) {
-                // Calculate elapsed time in the preview loop since minimization
-                let elapsed = currentPreviewPos - minPrev;
-                if (elapsed < 0 && loopDur > 0) {
-                  elapsed += loopDur;
-                }
-
-                // Adjust elapsed to account for multiple loops using wall-clock time
-                if (loopDur > 0 && typeof minTime === "number" && minTime > 0) {
-                  const wallClockElapsed = (Date.now() - minTime) / 1000;
-                  const expectedLoops = Math.floor(wallClockElapsed / loopDur);
-                  let bestElapsed = elapsed;
-                  let bestDiff = Math.abs(bestElapsed - wallClockElapsed);
-                  
-                  for (let i = Math.max(0, expectedLoops - 1); i <= expectedLoops + 1; i++) {
-                    const candidate = elapsed + (i * loopDur);
-                    const diff = Math.abs(candidate - wallClockElapsed);
-                    if (diff < bestDiff) {
-                      bestDiff = diff;
-                      bestElapsed = candidate;
-                    }
-                  }
-                  elapsed = bestElapsed;
-                }
-
-                const expectedPos = minYT + (elapsed * 1000);
+                const expectedPos = estimateLoopAlignedPositionMs({
+                  anchorPositionMs: minYT,
+                  anchorPreviewSeconds: minPrev,
+                  currentPreviewSeconds: currentPreviewPos,
+                  loopDurationSeconds: loopDur,
+                  hiddenAtMs: minTime
+                });
 
                 try {
                   const ytTimeMs = event.target.getCurrentTime() * 1000;
@@ -178,10 +161,9 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
           usePlayerStore.getState().setBuffering(false);
           pendingPauseRef.current = false;
 
-          const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
           const settings = useSettingsStore.getState();
 
-          if (isMobile && settings?.mobileBackgroundFallback) {
+          if (isOfficialChromeAndroid() && settings?.mobileBackgroundFallback && window.ytBackgroundFallbackTriggered) {
             console.log("[useYouTubePlayer] Ignoring YT.PAUSED because mobileBackgroundFallback is active.");
             return;
           }

@@ -5,6 +5,7 @@ import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { useToast } from "../common/ToastProvider.jsx";
 import { useDirectAudio } from "../../hooks/useDirectAudio.js";
 import { pauseDirectAudio, playDirectAudio, prefetchDirectAudioSource } from "../../lib/directAudio.js";
+import { shouldUseChromeAndroidBackgroundFallback } from "../../lib/browserPlayback.js";
 import { isDirectAudioSource } from "../../lib/resolvers.js";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
@@ -152,12 +153,11 @@ export function Player({ online }) {
     const nextTrack = getNextTrack();
     if (!nextTrack) return;
 
-    const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const settings = useSettingsStore.getState();
+    const chromeBackgroundFallback = shouldUseChromeAndroidBackgroundFallback(settings);
 
     if (
-      isMobile &&
-      settings?.mobileBackgroundFallback &&
+      chromeBackgroundFallback &&
       nextTrack.videoId &&
       !nextTrack.previewUrl
     ) {
