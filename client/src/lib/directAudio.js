@@ -330,7 +330,7 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
   const isDirect = sourceType === "preview" || sourceType === "jamendo";
 
   if (isDirect) {
-    audio.loop = false;
+    audio.loop = Boolean(track?.videoId);
     if (isPlaying) {
       if (track) {
         const src = getDirectAudioSourceSync(track, sourceType);

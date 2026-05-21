@@ -1,6 +1,8 @@
 import { env } from "../../config/env.js";
 import { resolveFixtureTrack, searchFixtureTracks } from "../../data/fixtures.js";
 import { safeFetchJson } from "../../utils/fetchJson.js";
+import { cleanYoutubeTitleAndArtist, matchesTitleAndArtist } from "../../utils/normalize.js";
+
 
 export async function searchItunesPreview(query, limit = 5) {
   if (env.nodeEnv === "test") {
@@ -42,13 +44,14 @@ export async function searchItunesPreview(query, limit = 5) {
 }
 
 export async function getPreviewForTrack(title, artistName) {
-  const results = await searchItunesPreview(`${title} ${artistName}`, 5);
-  const normalizedTitle = title.toLowerCase();
-  const normalizedArtist = artistName.toLowerCase();
+  const cleaned = cleanYoutubeTitleAndArtist(title, artistName);
+  const cleanTitle = cleaned.title;
+  const cleanArtist = cleaned.artist;
+
+  const results = await searchItunesPreview(`${cleanTitle} ${cleanArtist}`, 5);
+
   const match = results.find(
-    (item) =>
-      item.title?.toLowerCase().includes(normalizedTitle) &&
-      item.artistName?.toLowerCase().includes(normalizedArtist)
+    (item) => matchesTitleAndArtist(item.title, item.artistName, title, artistName)
   );
 
   if (match) return match;

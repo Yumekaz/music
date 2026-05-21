@@ -8,6 +8,7 @@ import { pauseDirectAudio, playDirectAudio, prefetchDirectAudioSource } from "..
 import { isDirectAudioSource } from "../../lib/resolvers.js";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
+import { useSettingsStore } from "../../store/settingsStore.js";
 import { PlayerControls } from "./PlayerControls.jsx";
 import { ProgressBar } from "./ProgressBar.jsx";
 import { VolumeControl } from "./VolumeControl.jsx";
@@ -116,10 +117,76 @@ export function Player({ online }) {
     }
   }, [currentTrack, sourceType, showToast]);
 
+  // Resolve preview URL for YouTube tracks that don't have it, to support background playback
+  useEffect(() => {
+    if (currentTrack && sourceType === "youtube" && currentTrack.videoId && !currentTrack.previewUrl) {
+      const title = currentTrack.title || "";
+      const artist = currentTrack.artistName || currentTrack.artist || "";
+      if (!title) return;
+
+      resolveTrack(title, artist)
+        .then((resolvedTrack) => {
+          if (resolvedTrack && resolvedTrack.previewUrl) {
+            usePlayerStore.setState((state) => {
+              if (state.currentTrack?.id === currentTrack.id) {
+                return {
+                  currentTrack: {
+                    ...state.currentTrack,
+                    previewUrl: resolvedTrack.previewUrl,
+                    jamendoUrl: resolvedTrack.jamendoUrl || state.currentTrack.jamendoUrl
+                  }
+                };
+              }
+              return state;
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Failed to resolve preview URL for track:", err);
+        });
+    }
+  }, [currentTrack, sourceType]);
+
   // Prefetch next track direct URL if it's a direct source to avoid background transition pause in Chrome mobile
   useEffect(() => {
     const nextTrack = getNextTrack();
-    if (nextTrack) {
+    if (!nextTrack) return;
+
+    const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const settings = useSettingsStore.getState();
+
+    if (
+      isMobile &&
+      settings?.mobileBackgroundFallback &&
+      nextTrack.videoId &&
+      !nextTrack.previewUrl
+    ) {
+      const title = nextTrack.title || "";
+      const artist = nextTrack.artistName || nextTrack.artist || "";
+      if (title) {
+        resolveTrack(title, artist)
+          .then((resolvedTrack) => {
+            if (resolvedTrack && resolvedTrack.previewUrl) {
+              usePlayerStore.setState((state) => {
+                const newQueue = state.queue.map((t) => {
+                  if (t.id === nextTrack.id) {
+                    return {
+                      ...t,
+                      previewUrl: resolvedTrack.previewUrl,
+                      jamendoUrl: resolvedTrack.jamendoUrl || t.jamendoUrl
+                    };
+                  }
+                  return t;
+                });
+                return { queue: newQueue };
+              });
+            }
+          })
+          .catch((err) => {
+            console.warn("Failed to prefetch next YouTube track preview URL:", err);
+          });
+      }
+    } else {
       const nextSourceType = nextTrack.videoId ? "youtube" : (sourceType === "youtube" ? "preview" : sourceType);
       if (isDirectAudioSource(nextSourceType)) {
         prefetchDirectAudioSource(nextTrack, nextSourceType).catch(() => {});

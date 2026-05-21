@@ -113,6 +113,16 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
         if (event.data === YT.PAUSED) {
           usePlayerStore.getState().setBuffering(false);
           pendingPauseRef.current = false;
+
+          const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          const settings = useSettingsStore.getState();
+          const isHidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+
+          if (isMobile && isHidden && settings?.mobileBackgroundFallback) {
+            console.log("[useYouTubePlayer] Ignoring YT.PAUSED because document is hidden and mobileBackgroundFallback is active.");
+            return;
+          }
+
           if (usePlayerStore.getState().sourceType !== "youtube") return;
           if (storeIsPlaying) pause();
         }

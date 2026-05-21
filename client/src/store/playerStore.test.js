@@ -8,6 +8,11 @@ vi.mock("../lib/directAudio.js", () => ({
   getDirectAudioElement: vi.fn(() => null)
 }));
 
+vi.mock("../services/tracks.js", () => ({
+  resolveTrack: vi.fn(() => Promise.resolve({ previewUrl: "/mock-preview-url" }))
+}));
+
+
 const track = {
   id: "track-blinding-lights",
   title: "Blinding Lights",

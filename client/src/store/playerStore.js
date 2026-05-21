@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { playDirectAudio, playDirectAudioSync, syncAudioStateSync, getDirectAudioElement } from "../lib/directAudio.js";
 import { getRecommendations } from "../services/search.js";
+import { resolveTrack } from "../services/tracks.js";
 import { useSettingsStore } from "./settingsStore.js";
 
 function resolveSourceType(track, sourceType) {
@@ -53,18 +54,60 @@ export const usePlayerStore = create(
         return queue[nextIndex];
       },
 
-      playTrack: (track, sourceType = "youtube") => {
-        const resolvedSourceType = resolveSourceType(track, sourceType);
+      playTrack: async (track, sourceType = "youtube") => {
+        const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const settings = useSettingsStore.getState();
         const { volume } = get();
 
-        syncAudioStateSync(track, resolvedSourceType, true, volume);
+        let trackWithPreview = track;
+        if (
+          isMobile &&
+          settings?.mobileBackgroundFallback &&
+          sourceType === "youtube" &&
+          !track.previewUrl
+        ) {
+          // Set loading/buffering state immediately so UI is responsive
+          set({
+            currentTrack: track,
+            sourceType: "youtube",
+            isPlaying: true,
+            isBuffering: true,
+            positionMs: 0,
+            durationMs: track?.durationMs || 0
+          });
+
+          // Play silence synchronously to unlock the audio element on mobile
+          syncAudioStateSync(track, "youtube", true, volume);
+
+          try {
+            const title = track.title || "";
+            const artist = track.artistName || track.artist || "";
+            if (title) {
+              const resolved = await resolveTrack(title, artist);
+              if (resolved && resolved.previewUrl) {
+                trackWithPreview = {
+                  ...track,
+                  previewUrl: resolved.previewUrl,
+                  jamendoUrl: resolved.jamendoUrl || track.jamendoUrl
+                };
+              }
+            }
+          } catch (err) {
+            console.warn("Failed to resolve preview URL before playing:", err);
+          }
+        }
+
+        const resolvedSourceType = resolveSourceType(trackWithPreview, sourceType);
+
+        syncAudioStateSync(trackWithPreview, resolvedSourceType, true, volume);
 
         set({
-          currentTrack: track,
+          currentTrack: trackWithPreview,
           sourceType: resolvedSourceType,
           isPlaying: true,
+          isBuffering: false,
           positionMs: 0,
-          durationMs: track?.durationMs || 0
+          durationMs: trackWithPreview?.durationMs || 0
         });
       },
       pause: () => {
