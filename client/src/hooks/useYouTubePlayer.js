@@ -115,24 +115,29 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
               const dur = audio.duration;
               const loopDur = (dur && !isNaN(dur)) ? dur : 30;
 
-              // Calculate elapsed time in the preview loop since minimization
-              let elapsed = currentPreviewPos - (window.ytMinimizedPreviewPos || 0);
-              if (elapsed < 0 && loopDur > 0) {
-                elapsed += loopDur;
-              }
-              const expectedPos = (window.ytMinimizedYouTubePos || 0) + (elapsed * 1000);
+              const minYT = window.ytMinimizedYouTubePos;
+              const minPrev = window.ytMinimizedPreviewPos;
 
-              try {
-                const ytTimeMs = event.target.getCurrentTime() * 1000;
-                const diff = Math.abs(ytTimeMs - expectedPos);
-                console.log(`[useYouTubePlayer] Returning from background fallback. YT time: ${ytTimeMs}ms, Expected: ${expectedPos}ms, Diff: ${diff}ms`);
-
-                // If the desync is more than 300ms, perform a corrective seek to perfectly align with direct audio
-                if (diff > 300) {
-                  event.target.seekTo(expectedPos / 1000, true);
+              if (typeof minYT === "number" && !isNaN(minYT) && typeof minPrev === "number" && !isNaN(minPrev)) {
+                // Calculate elapsed time in the preview loop since minimization
+                let elapsed = currentPreviewPos - minPrev;
+                if (elapsed < 0 && loopDur > 0) {
+                  elapsed += loopDur;
                 }
-              } catch (err) {
-                console.error("[useYouTubePlayer] Failed to query/seek YT player on return:", err);
+                const expectedPos = minYT + (elapsed * 1000);
+
+                try {
+                  const ytTimeMs = event.target.getCurrentTime() * 1000;
+                  const diff = Math.abs(ytTimeMs - expectedPos);
+                  console.log(`[useYouTubePlayer] Returning from background fallback. YT time: ${ytTimeMs}ms, Expected: ${expectedPos}ms, Diff: ${diff}ms`);
+
+                  // If the desync is more than 300ms, perform a corrective seek to perfectly align with direct audio
+                  if (diff > 300) {
+                    event.target.seekTo(expectedPos / 1000, true);
+                  }
+                } catch (err) {
+                  console.error("[useYouTubePlayer] Failed to query/seek YT player on return:", err);
+                }
               }
             }
 

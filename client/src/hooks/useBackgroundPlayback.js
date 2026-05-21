@@ -109,7 +109,17 @@ export function useBackgroundPlayback() {
 
           if (activePlayer && typeof activePlayer.getCurrentTime === "function") {
             try {
-              currentPos = activePlayer.getCurrentTime() * 1000;
+              const ytTime = activePlayer.getCurrentTime();
+              if (typeof ytTime === "number" && !isNaN(ytTime)) {
+                const ytTimeMs = ytTime * 1000;
+                // Only trust the YouTube player's time if it's positive and reasonably close to our last polled position.
+                // If it returns 0 or has a massive desync, Chrome Android has likely already frozen the iframe's context.
+                if (ytTimeMs > 0 && (state.positionMs < 2000 || Math.abs(ytTimeMs - state.positionMs) < 5000)) {
+                  currentPos = ytTimeMs;
+                } else {
+                  console.warn(`[useBackgroundPlayback] Ignoring suspicious YT player time: ${ytTimeMs}ms (last polled: ${state.positionMs}ms)`);
+                }
+              }
               activePlayer.pauseVideo();
             } catch (err) {
               console.error("[useBackgroundPlayback] Failed to pause active YT player:", err);
@@ -122,7 +132,6 @@ export function useBackgroundPlayback() {
             const dur = audio.duration;
             const loopDur = (dur && !isNaN(dur)) ? dur : 30;
             const startPos = (currentPos / 1000) % loopDur;
-            audio.currentTime = startPos;
 
             minimizedYouTubePosRef.current = currentPos;
             minimizedPreviewPosRef.current = startPos;
@@ -131,6 +140,29 @@ export function useBackgroundPlayback() {
             window.ytBackgroundFallbackTriggered = true;
             window.ytMinimizedYouTubePos = currentPos;
             window.ytMinimizedPreviewPos = startPos;
+
+            // Seek safely based on readyState to avoid DOMExceptions
+            if (audio.readyState >= 1) { // HAVE_METADATA or higher
+              try {
+                audio.currentTime = startPos;
+              } catch (err) {
+                console.error("[useBackgroundPlayback] Failed to set currentTime on ready audio:", err);
+              }
+            } else {
+              const handleLoadedMetadata = () => {
+                try {
+                  const actualDur = audio.duration;
+                  const actualLoopDur = (actualDur && !isNaN(actualDur)) ? actualDur : 30;
+                  const actualStartPos = (currentPos / 1000) % actualLoopDur;
+                  audio.currentTime = actualStartPos;
+                  minimizedPreviewPosRef.current = actualStartPos;
+                  window.ytMinimizedPreviewPos = actualStartPos;
+                } catch (err) {
+                  console.error("[useBackgroundPlayback] Failed to seek on loadedmetadata:", err);
+                }
+              };
+              audio.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true });
+            }
           } else {
             minimizedYouTubePosRef.current = currentPos;
             minimizedPreviewPosRef.current = (currentPos / 1000) % 30;
