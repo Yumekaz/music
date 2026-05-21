@@ -111,7 +111,6 @@ export function useBackgroundPlayback() {
             const loopDur = (dur && !isNaN(dur)) ? dur : 30;
             const startPos = (currentPos / 1000) % loopDur;
             audio.currentTime = startPos;
-            audio.volume = state.volume;
 
             minimizedYouTubePosRef.current = currentPos;
             minimizedPreviewPosRef.current = startPos;
@@ -120,10 +119,8 @@ export function useBackgroundPlayback() {
             minimizedPreviewPosRef.current = (currentPos / 1000) % 30;
           }
 
-          usePlayerStore.setState({
-            sourceType: "preview",
-            seekTarget: currentPos
-          });
+          // Trigger state sync to play the direct audio fallback preview at user volume
+          syncAudioStateSync(state.currentTrack, "youtube", state.isPlaying, state.volume);
         }
       } else if (document.visibilityState === "visible") {
         if (fallbackTriggeredRef.current) {
@@ -142,10 +139,10 @@ export function useBackgroundPlayback() {
             currentPos = minimizedYouTubePosRef.current + (elapsed * 1000);
           }
 
-          pauseDirectAudio();
+          // Trigger state sync to set direct audio back to silent keep-alive loop
+          syncAudioStateSync(state.currentTrack, "youtube", state.isPlaying, state.volume);
 
           usePlayerStore.setState({
-            sourceType: "youtube",
             seekTarget: currentPos
           });
         } else {

@@ -4,7 +4,8 @@ import { usePlayerStore } from "../store/playerStore.js";
 export function useMediaSession() {
   const currentTrack = usePlayerStore((state) => state.currentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
-  const togglePlay = usePlayerStore((state) => state.togglePlay);
+  const pause = usePlayerStore((state) => state.pause);
+  const resume = usePlayerStore((state) => state.resume);
   const next = usePlayerStore((state) => state.next);
   const previous = usePlayerStore((state) => state.previous);
   const seek = usePlayerStore((state) => state.seek);
@@ -35,8 +36,8 @@ export function useMediaSession() {
         : []
     });
 
-    navigator.mediaSession.setActionHandler("play", togglePlay);
-    navigator.mediaSession.setActionHandler("pause", togglePlay);
+    navigator.mediaSession.setActionHandler("play", resume);
+    navigator.mediaSession.setActionHandler("pause", pause);
     navigator.mediaSession.setActionHandler("previoustrack", previous);
     navigator.mediaSession.setActionHandler("nexttrack", next);
     
@@ -61,7 +62,7 @@ export function useMediaSession() {
       navigator.mediaSession.setActionHandler("nexttrack", null);
       navigator.mediaSession.setActionHandler("seekto", null);
     };
-  }, [currentTrack, togglePlay, next, previous, seek, setSeekTarget]);
+  }, [currentTrack, resume, pause, next, previous, seek, setSeekTarget]);
 
   // Sync playback state
   useEffect(() => {

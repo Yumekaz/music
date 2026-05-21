@@ -7,14 +7,6 @@ import { useSettingsStore } from "./settingsStore.js";
 
 function resolveSourceType(track, sourceType) {
   if (sourceType === "youtube" && !track?.videoId && track?.previewUrl) return "preview";
-
-  const isMobile = typeof navigator !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const isHidden = typeof document !== "undefined" && document.visibilityState === "hidden";
-  const settings = useSettingsStore.getState();
-  if (isMobile && isHidden && settings?.mobileBackgroundFallback && sourceType === "youtube" && track?.previewUrl) {
-    return "preview";
-  }
-
   return sourceType;
 }
 

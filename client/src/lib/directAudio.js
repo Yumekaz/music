@@ -1,4 +1,5 @@
 import { getDownload } from "./idb.js";
+import { useSettingsStore } from "../store/settingsStore.js";
 
 let directAudioElement = null;
 let fadeTimer = null;
@@ -364,14 +365,21 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
         ? getDirectAudioSourceSync(track, "preview")
         : getSilenceWavUrl();
 
+      // Dynamic Fallback Volume: play fallback preview at user volume when hidden, else keep-alive silent
+      const isHidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+      const settings = useSettingsStore.getState();
+      const targetVolume = (isMobile && isHidden && settings?.mobileBackgroundFallback && hasPreview)
+        ? volume
+        : 0.001;
+
       if (audio.src !== targetSrc) {
         setupAudioGraph();
         audio.src = targetSrc;
         audio.loop = true;
-        audio.volume = 0.001;
+        audio.volume = targetVolume;
         audio.load();
       } else {
-        audio.volume = 0.001;
+        audio.volume = targetVolume;
         audio.loop = true;
       }
       if (audio.paused) {
