@@ -117,6 +117,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
               const minYT = window.ytMinimizedYouTubePos;
               const minPrev = window.ytMinimizedPreviewPos;
+              const minTime = window.ytMinimizedTime;
 
               if (typeof minYT === "number" && !isNaN(minYT) && typeof minPrev === "number" && !isNaN(minPrev)) {
                 // Calculate elapsed time in the preview loop since minimization
@@ -124,6 +125,25 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
                 if (elapsed < 0 && loopDur > 0) {
                   elapsed += loopDur;
                 }
+
+                // Adjust elapsed to account for multiple loops using wall-clock time
+                if (loopDur > 0 && typeof minTime === "number" && minTime > 0) {
+                  const wallClockElapsed = (Date.now() - minTime) / 1000;
+                  const expectedLoops = Math.floor(wallClockElapsed / loopDur);
+                  let bestElapsed = elapsed;
+                  let bestDiff = Math.abs(bestElapsed - wallClockElapsed);
+                  
+                  for (let i = Math.max(0, expectedLoops - 1); i <= expectedLoops + 1; i++) {
+                    const candidate = elapsed + (i * loopDur);
+                    const diff = Math.abs(candidate - wallClockElapsed);
+                    if (diff < bestDiff) {
+                      bestDiff = diff;
+                      bestElapsed = candidate;
+                    }
+                  }
+                  elapsed = bestElapsed;
+                }
+
                 const expectedPos = minYT + (elapsed * 1000);
 
                 try {
@@ -140,6 +160,8 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
                 }
               }
             }
+
+            window.ytMinimizedTime = 0;
 
             // Silence/reset direct audio back to silent keep-alive loop
             const state = usePlayerStore.getState();

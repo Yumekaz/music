@@ -105,6 +105,7 @@ export function useBackgroundPlayback() {
         ) {
           fallbackTriggeredRef.current = true;
           minimizedTimeRef.current = Date.now();
+          window.ytMinimizedTime = minimizedTimeRef.current;
 
           // Get the active YouTube player and pause it immediately to prevent double audio overlay
           const activePlayer = window.activeYTPlayer;
