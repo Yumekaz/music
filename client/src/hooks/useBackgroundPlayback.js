@@ -29,6 +29,7 @@ export function useBackgroundPlayback() {
   const wakeLockRef = useRef(null);
   const keepaliveAudioRef = useRef(null);
   const keepaliveIntervalRef = useRef(null);
+  const fallbackTriggeredRef = useRef(false);
 
   // ── 1. Wake Lock ──────────────────────────────────────────────
   useEffect(() => {
