@@ -1384,10 +1384,17 @@ input[type="range"] {
 
 .volume-control {
   display: grid;
-  grid-template-columns: 18px 90px;
+  grid-template-columns: 18px auto 90px;
   align-items: center;
   gap: 8px;
   color: #9aa39a;
+}
+
+.volume-label {
+  color: #9aa39a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .player-tools {
@@ -2440,6 +2447,57 @@ input[type="range"] {
   letter-spacing: 0.06em;
 }
 
+.settings-disclosure-toggle {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #242c24;
+  border-radius: 8px;
+  background: #101510;
+  color: #f5f7f2;
+  text-align: left;
+}
+
+.settings-disclosure-toggle .settings-section-title {
+  min-width: fit-content;
+}
+
+.settings-disclosure-toggle > svg {
+  color: #9aa39a;
+  transition: transform 160ms ease;
+}
+
+.settings-disclosure-toggle.open > svg {
+  transform: rotate(180deg);
+}
+
+.settings-disclosure-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.settings-disclosure-copy strong {
+  overflow: hidden;
+  color: #f5f7f2;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-disclosure-copy span {
+  overflow: hidden;
+  color: #7d887d;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .settings-card {
   padding: 20px;
   border: 1px solid #242c24;
@@ -3414,7 +3472,7 @@ input[type="range"] {
   gap: 12px;
   justify-content: center;
   width: 100%;
-  max-width: 320px;
+  max-width: 360px;
   margin: 0 auto;
   color: rgba(245, 247, 242, 0.6);
 }
@@ -3453,6 +3511,20 @@ input[type="range"] {
 
 /* Route-specific player and nav hiding on mobile viewports */
 @media (max-width: 768px) {
+  .now-playback-controls .volume-control {
+    max-width: 230px;
+    gap: 8px;
+    opacity: 0.76;
+  }
+
+  .now-playback-controls .volume-label {
+    font-size: 0.68rem;
+  }
+
+  .now-playback-controls .volume-control input[type="range"] {
+    max-width: 120px;
+  }
+
   .app-shell[data-route="/now-playing"] .player-bar {
     display: none !important;
   }

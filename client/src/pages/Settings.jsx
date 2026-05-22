@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, Bug, RotateCcw, Music2, Server, SlidersHorizontal, Tv2 } from "lucide-react";
+import { Activity, Bug, ChevronDown, RotateCcw, Music2, Server, SlidersHorizontal, Tv2 } from "lucide-react";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useEqualizer } from "../hooks/useEqualizer.js";
@@ -36,6 +36,7 @@ export default function Settings() {
   const [providerStatus, setProviderStatus] = useState(null);
   const [providerError, setProviderError] = useState("");
   const [chromeHandoff, setChromeHandoff] = useState(null);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
 
   const {
     crossfadeDuration,   setCrossfadeDuration,
@@ -69,6 +70,8 @@ export default function Settings() {
   }
 
   useEffect(() => {
+    if (!diagnosticsOpen) return;
+
     let cancelled = false;
     getProviderStatus()
       .then((status) => {
@@ -84,15 +87,17 @@ export default function Settings() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [diagnosticsOpen]);
 
   useEffect(() => {
+    if (!diagnosticsOpen) return;
+
     setChromeHandoff(getChromeBackgroundHandoff());
     const interval = window.setInterval(() => {
       setChromeHandoff(getChromeBackgroundHandoff());
     }, 1000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [diagnosticsOpen]);
 
   const crossfadeLabel =
     crossfadeDuration === 0 ? "Off" : `${crossfadeDuration}s`;
@@ -162,87 +167,102 @@ export default function Settings() {
 
       {/* Diagnostics */}
       <section className="settings-section">
-        <div className="settings-section-title">
-          <Bug size={18} aria-hidden="true" />
-          <span>Diagnostics</span>
-        </div>
+        <button
+          type="button"
+          className={`settings-disclosure-toggle ${diagnosticsOpen ? "open" : ""}`}
+          aria-expanded={diagnosticsOpen}
+          aria-controls="settings-diagnostics-panel"
+          onClick={() => setDiagnosticsOpen((open) => !open)}
+        >
+          <span className="settings-section-title">
+            <Bug size={18} aria-hidden="true" />
+            <span>Advanced</span>
+          </span>
+          <span className="settings-disclosure-copy">
+            <strong>Playback Diagnostics</strong>
+            <span>Troubleshooting details</span>
+          </span>
+          <ChevronDown size={18} aria-hidden="true" />
+        </button>
 
-        <div className="settings-card diagnostics-card">
-          <div className="diagnostics-grid">
-            <div>
-              <span>Browser</span>
-              <strong>{browserCapabilities.isOfficialChromeAndroid ? "Chrome Android" : browserCapabilities.isMobileBrowser ? "Mobile browser" : "Desktop browser"}</strong>
-            </div>
-            <div>
-              <span>Background</span>
-              <strong>{getBackgroundStrategyLabel(browserCapabilities.backgroundStrategy)}</strong>
-            </div>
-            <div>
-              <span>Engine</span>
-              <strong>{getPlaybackEngineLabel(activeEngine)}</strong>
-            </div>
-            <div>
-              <span>Source</span>
-              <strong>{sourceType}</strong>
-            </div>
-            <div>
-              <span>Media Session</span>
-              <strong>{browserCapabilities.supportsMediaSession ? "Supported" : "Unavailable"}</strong>
-            </div>
-            <div>
-              <span>Wake Lock</span>
-              <strong>{browserCapabilities.supportsWakeLock ? "Supported" : "Unavailable"}</strong>
-            </div>
-            <div>
-              <span>Current Track</span>
-              <strong>{currentTrack?.title || "None"}</strong>
-            </div>
-            <div>
-              <span>Chrome Handoff</span>
-              <strong>{chromeHandoff ? "Active" : "Idle"}</strong>
-            </div>
-          </div>
-
-          <div className="diagnostics-block">
-            <div className="diagnostics-block-title">
-              <Activity size={15} aria-hidden="true" />
-              <span>Queue Readiness</span>
-            </div>
-            {readinessEntries.length ? (
-              <div className="diagnostics-list">
-                {readinessEntries.map(([trackId, readiness]) => (
-                  <div key={trackId} className="diagnostics-row">
-                    <span>{trackId}</span>
-                    <strong>{getReadinessLabel(readiness.status)}</strong>
-                  </div>
-                ))}
+        {diagnosticsOpen && (
+          <div id="settings-diagnostics-panel" className="settings-card diagnostics-card">
+            <div className="diagnostics-grid">
+              <div>
+                <span>Browser</span>
+                <strong>{browserCapabilities.isOfficialChromeAndroid ? "Chrome Android" : browserCapabilities.isMobileBrowser ? "Mobile browser" : "Desktop browser"}</strong>
               </div>
-            ) : (
-              <p className="settings-card-note">No queue checks yet.</p>
-            )}
-          </div>
-
-          <div className="diagnostics-block">
-            <div className="diagnostics-block-title">
-              <Server size={15} aria-hidden="true" />
-              <span>Provider Health</span>
-            </div>
-            {providerError ? (
-              <p className="settings-card-note">{providerError}</p>
-            ) : providerStatus?.providers ? (
-              <div className="diagnostics-list">
-                {Object.entries(providerStatus.providers).map(([name, provider]) => (
-                  <div key={name} className="diagnostics-row">
-                    <span>{name}</span>
-                    <strong>{provider.status} / {provider.mode}</strong>
-                  </div>
-                ))}
+              <div>
+                <span>Background</span>
+                <strong>{getBackgroundStrategyLabel(browserCapabilities.backgroundStrategy)}</strong>
               </div>
-            ) : (
-              <p className="settings-card-note">Checking providers...</p>
-            )}
+              <div>
+                <span>Engine</span>
+                <strong>{getPlaybackEngineLabel(activeEngine)}</strong>
+              </div>
+              <div>
+                <span>Source</span>
+                <strong>{sourceType}</strong>
+              </div>
+              <div>
+                <span>Media Session</span>
+                <strong>{browserCapabilities.supportsMediaSession ? "Supported" : "Unavailable"}</strong>
+              </div>
+              <div>
+                <span>Wake Lock</span>
+                <strong>{browserCapabilities.supportsWakeLock ? "Supported" : "Unavailable"}</strong>
+              </div>
+              <div>
+                <span>Current Track</span>
+                <strong>{currentTrack?.title || "None"}</strong>
+              </div>
+              <div>
+                <span>Chrome Handoff</span>
+                <strong>{chromeHandoff ? "Active" : "Idle"}</strong>
+              </div>
+            </div>
+
+            <div className="diagnostics-block">
+              <div className="diagnostics-block-title">
+                <Activity size={15} aria-hidden="true" />
+                <span>Queue Readiness</span>
+              </div>
+              {readinessEntries.length ? (
+                <div className="diagnostics-list">
+                  {readinessEntries.map(([trackId, readiness]) => (
+                    <div key={trackId} className="diagnostics-row">
+                      <span>{trackId}</span>
+                      <strong>{getReadinessLabel(readiness.status)}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="settings-card-note">No queue checks yet.</p>
+              )}
+            </div>
+
+            <div className="diagnostics-block">
+              <div className="diagnostics-block-title">
+                <Server size={15} aria-hidden="true" />
+                <span>Provider Health</span>
+              </div>
+              {providerError ? (
+                <p className="settings-card-note">{providerError}</p>
+              ) : providerStatus?.providers ? (
+                <div className="diagnostics-list">
+                  {Object.entries(providerStatus.providers).map(([name, provider]) => (
+                    <div key={name} className="diagnostics-row">
+                      <span>{name}</span>
+                      <strong>{provider.status} / {provider.mode}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="settings-card-note">Checking providers...</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* ── Video Quality ── */}

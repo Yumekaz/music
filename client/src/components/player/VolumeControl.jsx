@@ -2,10 +2,11 @@ import { Volume2 } from "lucide-react";
 
 export function VolumeControl({ volume, onVolume }) {
   return (
-    <label className="volume-control" onClick={(e) => e.stopPropagation()}>
+    <label className="volume-control" title="App Volume" onClick={(e) => e.stopPropagation()}>
       <Volume2 size={16} aria-hidden="true" />
+      <span className="volume-label">App Volume</span>
       <input
-        aria-label="Volume"
+        aria-label="App Volume"
         type="range"
         min="0"
         max="1"
@@ -17,4 +18,3 @@ export function VolumeControl({ volume, onVolume }) {
     </label>
   );
 }
-
