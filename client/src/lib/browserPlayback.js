@@ -1,43 +1,13 @@
-const MOBILE_BROWSER_RE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-const CHROME_ANDROID_EXCLUDE_RE = /; wv|Version\/\d|OPR|Opera|SamsungBrowser|EdgA|Firefox|FxiOS|DuckDuckGo|UCBrowser|MiuiBrowser|HuaweiBrowser|HeyTapBrowser|VivoBrowser/i;
+export {
+  getBrowserCapabilities,
+  isMobileBrowser,
+  isOfficialChromeAndroid,
+  shouldUseChromeAndroidBackgroundFallback
+} from "./browserCapabilities.js";
 
 const CHROME_BACKGROUND_HANDOFF_KEY = "__musicChromeBackgroundHandoff";
 export const CHROME_RESUME_SEEK_LEAD_MS = 250;
 export const CHROME_HANDOFF_SETTLE_MS = 700;
-
-function getNavigator(navigatorLike) {
-  if (navigatorLike) return navigatorLike;
-  if (typeof navigator !== "undefined") return navigator;
-  return null;
-}
-
-export function isMobileBrowser(navigatorLike) {
-  const nav = getNavigator(navigatorLike);
-  return Boolean(nav?.userAgent && MOBILE_BROWSER_RE.test(nav.userAgent));
-}
-
-export function isOfficialChromeAndroid(navigatorLike) {
-  const nav = getNavigator(navigatorLike);
-  const ua = nav?.userAgent || "";
-
-  if (!/Android/i.test(ua) || !/\bChrome\/\d+/i.test(ua)) return false;
-  if (CHROME_ANDROID_EXCLUDE_RE.test(ua)) return false;
-
-  const brands = [
-    ...(nav?.userAgentData?.brands || []),
-    ...(nav?.userAgentData?.fullVersionList || [])
-  ].map((brand) => brand?.brand || "");
-
-  if (brands.some((brand) => /Samsung|Edge|Opera|Brave|Firefox|DuckDuckGo/i.test(brand))) {
-    return false;
-  }
-
-  return brands.length === 0 || brands.some((brand) => /Google Chrome/i.test(brand));
-}
-
-export function shouldUseChromeAndroidBackgroundFallback(settings, navigatorLike) {
-  return Boolean(settings?.mobileBackgroundFallback && isOfficialChromeAndroid(navigatorLike));
-}
 
 function finiteNumber(value, fallback = 0) {
   const number = Number(value);

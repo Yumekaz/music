@@ -1,14 +1,47 @@
 import { useState } from "react";
-import { ListMusic, Play, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Play, Smartphone, WifiOff, X } from "lucide-react";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { PlayingBars } from "../common/PlayingBars.jsx";
 import { usePlayerStore } from "../../store/playerStore.js";
+import { QUEUE_READINESS, getReadinessLabel } from "../../lib/queuePreflight.js";
+
+function readinessIcon(status) {
+  switch (status) {
+    case QUEUE_READINESS.READY:
+      return <CheckCircle2 size={13} />;
+    case QUEUE_READINESS.FOREGROUND_ONLY:
+      return <Smartphone size={13} />;
+    case QUEUE_READINESS.PROVIDER_TIMEOUT:
+      return <Clock3 size={13} />;
+    case QUEUE_READINESS.OFFLINE:
+      return <WifiOff size={13} />;
+    case QUEUE_READINESS.MISSING_VIDEO:
+    case QUEUE_READINESS.MISSING_PREVIEW:
+    case QUEUE_READINESS.UNAVAILABLE:
+      return <AlertTriangle size={13} />;
+    default:
+      return <Clock3 size={13} />;
+  }
+}
+
+function ReadinessBadge({ readiness }) {
+  const status = readiness?.status || "unknown";
+  const label = getReadinessLabel(status);
+
+  return (
+    <span className={`queue-readiness queue-readiness--${status}`} title={readiness?.reason || label}>
+      {readinessIcon(status)}
+      <span>{label}</span>
+    </span>
+  );
+}
 
 export function QueuePanel({ open, onClose }) {
   const currentTrack = usePlayerStore((state) => state.currentTrack);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const isBuffering = usePlayerStore((state) => state.isBuffering);
   const queue = usePlayerStore((state) => state.queue);
+  const queueReadiness = usePlayerStore((state) => state.queueReadiness);
   const playTrack = usePlayerStore((state) => state.playTrack);
   const removeFromQueue = usePlayerStore((state) => state.removeFromQueue);
 
@@ -71,6 +104,7 @@ export function QueuePanel({ open, onClose }) {
               <span className="queue-title">{currentTrack.title}</span>
               <span className="queue-artist">{currentTrack.artistName}</span>
             </div>
+            <ReadinessBadge readiness={queueReadiness[currentTrack.id]} />
             <PlayingBars isPlaying={isPlaying} isBuffering={isBuffering} />
           </div>
         </div>
@@ -94,6 +128,7 @@ export function QueuePanel({ open, onClose }) {
                 <span className="queue-title">{track.title}</span>
                 <span className="queue-artist">{track.artistName}</span>
               </div>
+              <ReadinessBadge readiness={queueReadiness[track.id]} />
               <button
                 type="button"
                 className="icon-button icon-button--small queue-play"

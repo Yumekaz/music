@@ -25,7 +25,7 @@ export const useSettingsStore = create(
       setPlaybackQuality: (playbackQuality) => set({ playbackQuality }),
       setYoutubeAvailableQualities: (youtubeAvailableQualities) => set({ youtubeAvailableQualities }),
 
-      // Mobile Chrome/Safari background playback fallback
+      // Official Chrome Android background playback fallback
       mobileBackgroundFallback: true,
       setMobileBackgroundFallback: (mobileBackgroundFallback) => set({ mobileBackgroundFallback }),
     }),

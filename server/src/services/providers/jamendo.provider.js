@@ -1,8 +1,18 @@
 import { env } from "../../config/env.js";
 import { safeFetchJson } from "../../utils/fetchJson.js";
+import { PROVIDER_STATUSES, recordProviderStatus } from "../providerHealth.service.js";
 
 export async function searchJamendo(query, limit = 5) {
-  if (!env.jamendoClientId) return [];
+  if (!env.jamendoClientId) {
+    recordProviderStatus("jamendo", {
+      configured: false,
+      mode: "api",
+      status: PROVIDER_STATUSES.DISABLED,
+      lastLatencyMs: 0,
+      lastError: ""
+    });
+    return [];
+  }
 
   const params = new URLSearchParams({
     client_id: env.jamendoClientId,
@@ -12,7 +22,12 @@ export async function searchJamendo(query, limit = 5) {
     include: "musicinfo",
     audioformat: "mp32"
   });
-  const data = await safeFetchJson(`https://api.jamendo.com/v3.0/tracks/?${params}`);
+  const data = await safeFetchJson(`https://api.jamendo.com/v3.0/tracks/?${params}`, {
+    providerName: "jamendo",
+    providerMode: "api",
+    providerConfigured: true,
+    timeoutMs: 7000
+  });
 
   return (data?.results || []).map((track) => ({
     jamendoId: String(track.id),

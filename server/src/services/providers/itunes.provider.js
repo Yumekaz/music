@@ -2,6 +2,7 @@ import { env } from "../../config/env.js";
 import { resolveFixtureTrack, searchFixtureTracks } from "../../data/fixtures.js";
 import { safeFetchJson } from "../../utils/fetchJson.js";
 import { cleanYoutubeTitleAndArtist, matchesTitleAndArtist } from "../../utils/normalize.js";
+import { PROVIDER_STATUSES, recordProviderStatus } from "../providerHealth.service.js";
 
 
 export async function searchItunesPreview(query, limit = 5) {
@@ -21,8 +22,20 @@ export async function searchItunesPreview(query, limit = 5) {
     limit: String(limit)
   });
 
-  const data = await safeFetchJson(`https://itunes.apple.com/search?${params}`);
+  const data = await safeFetchJson(`https://itunes.apple.com/search?${params}`, {
+    providerName: "itunes",
+    providerMode: "public-api",
+    providerConfigured: true,
+    timeoutMs: 7000
+  });
   if (!data?.results?.length) {
+    recordProviderStatus("itunes", {
+      configured: true,
+      mode: "fixture",
+      status: PROVIDER_STATUSES.FALLBACK,
+      lastLatencyMs: 0,
+      lastError: ""
+    });
     return searchFixtureTracks(query, limit).map((track) => ({
       title: track.title,
       artistName: track.artistName,
@@ -102,4 +115,3 @@ export async function getPreviewForTrack(title, artistName) {
 
   return null;
 }
-

@@ -24,5 +24,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   const { clearMemoryCache } = await import("../src/utils/cache.js");
+  const { resetProviderStatusForTests } = await import("../src/services/providerHealth.service.js");
   clearMemoryCache();
+  resetProviderStatusForTests();
 });

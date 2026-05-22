@@ -82,6 +82,18 @@ function parseYoutubeTitle(videoTitle, channelTitle) {
   };
 }
 
+function lrclibOptions() {
+  return {
+    providerName: "lyrics",
+    providerMode: "lrclib",
+    providerConfigured: true,
+    timeoutMs: 7000,
+    headers: {
+      "User-Agent": "MusicAppV3/1.0.0"
+    }
+  };
+}
+
 export async function getLyricsFromLrclib(track) {
   console.log("[lrclib] input track:", JSON.stringify(track));
   const fallbackTrack = resolveFixtureTrack(track.title, track.artistName);
@@ -112,11 +124,7 @@ export async function getLyricsFromLrclib(track) {
   }
 
   console.log("[lrclib] Exact match 1 URL: https://lrclib.net/api/get?" + params.toString());
-  let data = await safeFetchJson(`https://lrclib.net/api/get?${params}`, {
-    headers: {
-      "User-Agent": "MusicAppV3/1.0.0"
-    }
-  });
+  let data = await safeFetchJson(`https://lrclib.net/api/get?${params}`, lrclibOptions());
   console.log("[lrclib] Exact match 1 result exists:", !!data, "syncedLyrics:", !!data?.syncedLyrics);
 
   // If that fails, try with the full clean artist name
@@ -129,11 +137,7 @@ export async function getLyricsFromLrclib(track) {
     if (track.durationMs && track.durationMs > 0) {
       paramsFull.append("duration", String(Math.round(track.durationMs / 1000)));
     }
-    data = await safeFetchJson(`https://lrclib.net/api/get?${paramsFull}`, {
-      headers: {
-        "User-Agent": "MusicAppV3/1.0.0"
-      }
-    });
+    data = await safeFetchJson(`https://lrclib.net/api/get?${paramsFull}`, lrclibOptions());
   }
 
   // 2. Fall back to fuzzy searching if exact match fails
@@ -143,9 +147,7 @@ export async function getLyricsFromLrclib(track) {
     let searchQuery = `${parsed.title} ${parsed.artist}`;
     let searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(searchQuery)}`;
     console.log("[lrclib] Fuzzy Attempt 1 URL:", searchUrl);
-    let searchResults = await safeFetchJson(searchUrl, {
-      headers: { "User-Agent": "MusicAppV3/1.0.0" }
-    });
+    let searchResults = await safeFetchJson(searchUrl, lrclibOptions());
     console.log("[lrclib] Fuzzy Attempt 1 results count:", searchResults?.length);
 
     // Attempt 2: if no results, search with clean title + primary artist
@@ -153,9 +155,7 @@ export async function getLyricsFromLrclib(track) {
       searchQuery = `${parsed.title} ${parsed.primaryArtist}`;
       searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(searchQuery)}`;
       console.log("[lrclib] Fuzzy Attempt 2 URL:", searchUrl);
-      searchResults = await safeFetchJson(searchUrl, {
-        headers: { "User-Agent": "MusicAppV3/1.0.0" }
-      });
+      searchResults = await safeFetchJson(searchUrl, lrclibOptions());
       console.log("[lrclib] Fuzzy Attempt 2 results count:", searchResults?.length);
     }
 
@@ -164,9 +164,7 @@ export async function getLyricsFromLrclib(track) {
       searchQuery = parsed.title;
       searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(searchQuery)}`;
       console.log("[lrclib] Fuzzy Attempt 3 URL:", searchUrl);
-      searchResults = await safeFetchJson(searchUrl, {
-        headers: { "User-Agent": "MusicAppV3/1.0.0" }
-      });
+      searchResults = await safeFetchJson(searchUrl, lrclibOptions());
       console.log("[lrclib] Fuzzy Attempt 3 results count:", searchResults?.length);
     }
 

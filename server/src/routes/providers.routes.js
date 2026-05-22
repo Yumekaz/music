@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { getProviderStatus } from "../config/env.js";
+import { getProviderStatusSnapshot } from "../services/providerHealth.service.js";
 
 const router = Router();
 
 router.get("/status", (_request, response) => {
-  response.json(getProviderStatus());
+  response.json(getProviderStatusSnapshot());
 });
 
 export default router;

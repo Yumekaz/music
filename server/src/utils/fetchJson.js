@@ -1,3 +1,5 @@
+import { runProvider } from "../services/providerHealth.service.js";
+
 export async function fetchJson(url, options = {}) {
   const { timeoutMs = 10000, ...fetchOptions } = options;
   const controller = new AbortController();
@@ -20,8 +22,29 @@ export async function fetchJson(url, options = {}) {
 }
 
 export async function safeFetchJson(url, options = {}) {
+  const {
+    providerName,
+    providerMode,
+    providerConfigured,
+    providerSuccessStatus,
+    ...fetchOptions
+  } = options;
+
   try {
-    return await fetchJson(url, options);
+    if (providerName) {
+      return await runProvider(
+        providerName,
+        () => fetchJson(url, fetchOptions),
+        {
+          mode: providerMode,
+          configured: providerConfigured,
+          successStatus: providerSuccessStatus,
+          timeoutMs: fetchOptions.timeoutMs
+        }
+      );
+    }
+
+    return await fetchJson(url, fetchOptions);
   } catch (error) {
     console.error("safeFetchJson failed for URL:", url, error);
     return null;

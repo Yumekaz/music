@@ -1,10 +1,15 @@
-import { useRef } from "react";
-import { SlidersHorizontal, Tv2, Music2, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Activity, Bug, RotateCcw, Music2, Server, SlidersHorizontal, Tv2 } from "lucide-react";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useEqualizer } from "../hooks/useEqualizer.js";
 import { EQUALIZER_PRESETS } from "../components/equalizer/EqualizerPresets.js";
 import { isDirectAudioSource } from "../lib/resolvers.js";
+import { getBrowserCapabilities, getBackgroundStrategyLabel } from "../lib/browserCapabilities.js";
+import { getChromeBackgroundHandoff } from "../lib/browserPlayback.js";
+import { getPlaybackEngineLabel } from "../lib/playbackController.js";
+import { getReadinessLabel } from "../lib/queuePreflight.js";
+import { getProviderStatus } from "../services/providers.js";
 
 const QUALITY_OPTIONS = [
   { value: "default", label: "Auto",   desc: "YouTube chooses the best quality" },
@@ -28,6 +33,10 @@ const BANDS = [
 ];
 
 export default function Settings() {
+  const [providerStatus, setProviderStatus] = useState(null);
+  const [providerError, setProviderError] = useState("");
+  const [chromeHandoff, setChromeHandoff] = useState(null);
+
   const {
     crossfadeDuration,   setCrossfadeDuration,
     playbackQuality,     setPlaybackQuality,
@@ -37,7 +46,15 @@ export default function Settings() {
   } = useSettingsStore();
 
   const sourceType = usePlayerStore((state) => state.sourceType);
+  const activeEngine = usePlayerStore((state) => state.activeEngine);
+  const queueReadiness = usePlayerStore((state) => state.queueReadiness);
+  const currentTrack = usePlayerStore((state) => state.currentTrack);
   const directEnabled = isDirectAudioSource(sourceType);
+  const browserCapabilities = useMemo(
+    () => getBrowserCapabilities({ mobileBackgroundFallback }),
+    [mobileBackgroundFallback]
+  );
+  const readinessEntries = Object.entries(queueReadiness || {}).slice(0, 4);
 
   // EQ hook needs an audio ref — pull the singleton element
   const audioRef = useRef(
@@ -50,6 +67,32 @@ export default function Settings() {
   function resetEQ() {
     setEqualizerPreset("Normal", EQUALIZER_PRESETS["Normal"]);
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    getProviderStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setProviderStatus(status);
+        setProviderError("");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setProviderError(error?.message || "Provider status unavailable");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setChromeHandoff(getChromeBackgroundHandoff());
+    const interval = window.setInterval(() => {
+      setChromeHandoff(getChromeBackgroundHandoff());
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const crossfadeLabel =
     crossfadeDuration === 0 ? "Off" : `${crossfadeDuration}s`;
@@ -113,6 +156,91 @@ export default function Settings() {
             >
               <span className="toggle-thumb" />
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Diagnostics */}
+      <section className="settings-section">
+        <div className="settings-section-title">
+          <Bug size={18} aria-hidden="true" />
+          <span>Diagnostics</span>
+        </div>
+
+        <div className="settings-card diagnostics-card">
+          <div className="diagnostics-grid">
+            <div>
+              <span>Browser</span>
+              <strong>{browserCapabilities.isOfficialChromeAndroid ? "Chrome Android" : browserCapabilities.isMobileBrowser ? "Mobile browser" : "Desktop browser"}</strong>
+            </div>
+            <div>
+              <span>Background</span>
+              <strong>{getBackgroundStrategyLabel(browserCapabilities.backgroundStrategy)}</strong>
+            </div>
+            <div>
+              <span>Engine</span>
+              <strong>{getPlaybackEngineLabel(activeEngine)}</strong>
+            </div>
+            <div>
+              <span>Source</span>
+              <strong>{sourceType}</strong>
+            </div>
+            <div>
+              <span>Media Session</span>
+              <strong>{browserCapabilities.supportsMediaSession ? "Supported" : "Unavailable"}</strong>
+            </div>
+            <div>
+              <span>Wake Lock</span>
+              <strong>{browserCapabilities.supportsWakeLock ? "Supported" : "Unavailable"}</strong>
+            </div>
+            <div>
+              <span>Current Track</span>
+              <strong>{currentTrack?.title || "None"}</strong>
+            </div>
+            <div>
+              <span>Chrome Handoff</span>
+              <strong>{chromeHandoff ? "Active" : "Idle"}</strong>
+            </div>
+          </div>
+
+          <div className="diagnostics-block">
+            <div className="diagnostics-block-title">
+              <Activity size={15} aria-hidden="true" />
+              <span>Queue Readiness</span>
+            </div>
+            {readinessEntries.length ? (
+              <div className="diagnostics-list">
+                {readinessEntries.map(([trackId, readiness]) => (
+                  <div key={trackId} className="diagnostics-row">
+                    <span>{trackId}</span>
+                    <strong>{getReadinessLabel(readiness.status)}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="settings-card-note">No queue checks yet.</p>
+            )}
+          </div>
+
+          <div className="diagnostics-block">
+            <div className="diagnostics-block-title">
+              <Server size={15} aria-hidden="true" />
+              <span>Provider Health</span>
+            </div>
+            {providerError ? (
+              <p className="settings-card-note">{providerError}</p>
+            ) : providerStatus?.providers ? (
+              <div className="diagnostics-list">
+                {Object.entries(providerStatus.providers).map(([name, provider]) => (
+                  <div key={name} className="diagnostics-row">
+                    <span>{name}</span>
+                    <strong>{provider.status} / {provider.mode}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="settings-card-note">Checking providers...</p>
+            )}
           </div>
         </div>
       </section>

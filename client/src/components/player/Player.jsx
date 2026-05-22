@@ -1,29 +1,28 @@
 import { Disc3, Heart, ListMusic } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../common/ImageWithFallback.jsx";
 import { useToast } from "../common/ToastProvider.jsx";
 import { useDirectAudio } from "../../hooks/useDirectAudio.js";
-import { pauseDirectAudio, playDirectAudio, prefetchDirectAudioSource } from "../../lib/directAudio.js";
-import { shouldUseChromeAndroidBackgroundFallback } from "../../lib/browserPlayback.js";
-import { isDirectAudioSource } from "../../lib/resolvers.js";
+import { useQueuePreflight } from "../../hooks/useQueuePreflight.js";
+import { getPlayerReadinessMessage } from "../../lib/queuePreflight.js";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
-import { useSettingsStore } from "../../store/settingsStore.js";
 import { PlayerControls } from "./PlayerControls.jsx";
 import { ProgressBar } from "./ProgressBar.jsx";
 import { VolumeControl } from "./VolumeControl.jsx";
 import { YouTubeEmbed } from "./YouTubeEmbed.jsx";
 import { QueuePanel } from "./QueuePanel.jsx";
 import { useMediaSession } from "../../hooks/useMediaSession.js";
-import { resolveTrack } from "../../services/tracks.js";
 
 export function Player({ online }) {
   const navigate = useNavigate();
   const showToast = useToast();
   const [queueOpen, setQueueOpen] = useState(false);
+  const lastToastIdRef = useRef(null);
 
   useMediaSession();
+  useQueuePreflight({ online });
 
   const {
     currentTrack,
@@ -32,10 +31,11 @@ export function Player({ online }) {
     positionMs,
     durationMs,
     volume,
+    playbackFailure,
+    queueReadiness,
     pause,
-    resume,
     togglePlay,
-    setPosition,
+    seek,
     setDuration,
     setVolume,
     next,
@@ -46,16 +46,15 @@ export function Player({ online }) {
   const isLiked = useLibraryStore((state) => currentTrack ? state.isLiked(currentTrack.id) : false);
   const toggleLike = useLibraryStore((state) => state.toggleLike);
   const recordHistory = useLibraryStore((state) => state.recordHistory);
-  const directEnabled = isDirectAudioSource(sourceType);
 
   const onTimeUpdate = useCallback(
     (nextPosition, nextDuration) => {
-      setPosition(nextPosition);
+      usePlayerStore.getState().setPosition(nextPosition);
       if (Number.isFinite(nextDuration)) setDuration(nextDuration);
     },
-    [setDuration, setPosition]
+    [setDuration]
   );
-  const audioRef = useDirectAudio({
+  useDirectAudio({
     track: currentTrack,
     sourceType,
     isPlaying: online && isPlaying,
@@ -74,148 +73,17 @@ export function Player({ online }) {
   }, [isPlaying, online, pause]);
 
   useEffect(() => {
-    if (currentTrack && sourceType === "youtube" && !currentTrack.videoId) {
-      const title = currentTrack.title || "";
-      const artist = currentTrack.artistName || currentTrack.artist || "";
-      if (!title) return;
-
-      resolveTrack(title, artist)
-        .then((resolvedTrack) => {
-          if (resolvedTrack) {
-            if (resolvedTrack.videoId) {
-              usePlayerStore.setState((state) => {
-                if (state.currentTrack?.id === currentTrack.id) {
-                  return { currentTrack: { ...state.currentTrack, ...resolvedTrack } };
-                }
-                return state;
-              });
-            } else if (resolvedTrack.previewUrl) {
-              usePlayerStore.setState((state) => {
-                if (state.currentTrack?.id === currentTrack.id) {
-                  return {
-                    currentTrack: { ...state.currentTrack, ...resolvedTrack },
-                    sourceType: "preview",
-                    durationMs: resolvedTrack.durationMs || state.durationMs
-                  };
-                }
-                return state;
-              });
-            } else {
-              // Completely unavailable
-              usePlayerStore.setState((state) => {
-                if (state.currentTrack?.id === currentTrack.id) {
-                  return { isPlaying: false };
-                }
-                return state;
-              });
-              showToast?.("This track is currently unavailable.");
-            }
-          }
-        })
-        .catch((err) => {
-          console.warn("Failed to resolve track:", title, artist, err);
-        });
-    }
-  }, [currentTrack, sourceType, showToast]);
-
-  // Resolve preview URL for YouTube tracks that don't have it, to support background playback
-  useEffect(() => {
-    if (currentTrack && sourceType === "youtube" && currentTrack.videoId && !currentTrack.previewUrl) {
-      const title = currentTrack.title || "";
-      const artist = currentTrack.artistName || currentTrack.artist || "";
-      if (!title) return;
-
-      resolveTrack(title, artist)
-        .then((resolvedTrack) => {
-          if (resolvedTrack && resolvedTrack.previewUrl) {
-            usePlayerStore.setState((state) => {
-              if (state.currentTrack?.id === currentTrack.id) {
-                return {
-                  currentTrack: {
-                    ...state.currentTrack,
-                    previewUrl: resolvedTrack.previewUrl,
-                    jamendoUrl: resolvedTrack.jamendoUrl || state.currentTrack.jamendoUrl
-                  }
-                };
-              }
-              return state;
-            });
-          }
-        })
-        .catch((err) => {
-          console.warn("Failed to resolve preview URL for track:", err);
-        });
-    }
-  }, [currentTrack, sourceType]);
-
-  // Prefetch next track direct URL if it's a direct source to avoid background transition pause in Chrome mobile
-  useEffect(() => {
-    const nextTrack = getNextTrack();
-    if (!nextTrack) return;
-
-    const settings = useSettingsStore.getState();
-    const chromeBackgroundFallback = shouldUseChromeAndroidBackgroundFallback(settings);
-
-    if (
-      chromeBackgroundFallback &&
-      nextTrack.videoId &&
-      !nextTrack.previewUrl
-    ) {
-      const title = nextTrack.title || "";
-      const artist = nextTrack.artistName || nextTrack.artist || "";
-      if (title) {
-        resolveTrack(title, artist)
-          .then((resolvedTrack) => {
-            if (resolvedTrack && resolvedTrack.previewUrl) {
-              usePlayerStore.setState((state) => {
-                const newQueue = state.queue.map((t) => {
-                  if (t.id === nextTrack.id) {
-                    return {
-                      ...t,
-                      previewUrl: resolvedTrack.previewUrl,
-                      jamendoUrl: resolvedTrack.jamendoUrl || t.jamendoUrl
-                    };
-                  }
-                  return t;
-                });
-                return { queue: newQueue };
-              });
-            }
-          })
-          .catch((err) => {
-            console.warn("Failed to prefetch next YouTube track preview URL:", err);
-          });
-      }
-    } else {
-      const nextSourceType = nextTrack.videoId ? "youtube" : (sourceType === "youtube" ? "preview" : sourceType);
-      if (isDirectAudioSource(nextSourceType)) {
-        prefetchDirectAudioSource(nextTrack, nextSourceType).catch(() => {});
-      }
-    }
-  }, [currentTrack, sourceType, getNextTrack]);
+    if (!playbackFailure?.message || playbackFailure.id === lastToastIdRef.current) return;
+    lastToastIdRef.current = playbackFailure.id;
+    showToast?.(playbackFailure.message);
+  }, [playbackFailure, showToast]);
 
   if (!currentTrack) return null;
 
   const disabled = !online;
 
-  async function handleToggle() {
+  function handleToggle() {
     if (!currentTrack) return;
-    if (directEnabled) {
-      if (isPlaying) {
-        pauseDirectAudio();
-        pause();
-        return;
-      }
-      try {
-        await playDirectAudio(currentTrack, sourceType);
-      } catch (err) {
-        console.warn("Playback of direct audio failed:", err);
-        showToast?.("Could not play preview track.");
-      } finally {
-        resume();
-      }
-      return;
-    }
     togglePlay();
   }
 
@@ -232,6 +100,14 @@ export function Player({ online }) {
       navigate("/now-playing");
     }
   };
+
+  const currentReadiness = currentTrack ? queueReadiness[currentTrack.id] : null;
+  const readinessMessage = getPlayerReadinessMessage(currentReadiness);
+  const failureMessage =
+    playbackFailure?.trackId && playbackFailure.trackId !== currentTrack?.id
+      ? ""
+      : playbackFailure?.message || "";
+  const statusMessage = !online ? "Connect to internet to play" : readinessMessage || failureMessage;
 
   return (
     <>
@@ -274,7 +150,7 @@ export function Player({ online }) {
             </button>
           </div>
           <span>{currentTrack?.artistName || "Search or play from Home"}</span>
-          {!online ? <strong>Connect to internet to play</strong> : null}
+          {statusMessage ? <strong>{statusMessage}</strong> : null}
         </div>
         <div className="player-workspace">
           <PlayerControls
@@ -287,10 +163,7 @@ export function Player({ online }) {
           <ProgressBar
             positionMs={positionMs}
             durationMs={durationMs || currentTrack?.durationMs || 0}
-            onSeek={(pos) => {
-              setPosition(pos);
-              usePlayerStore.getState().setSeekTarget(pos);
-            }}
+            onSeek={seek}
           />
         </div>
         <div className="player-tools">

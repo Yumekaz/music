@@ -1786,6 +1786,49 @@ input[type="range"] {
   color: #9aa39a;
 }
 
+.queue-readiness {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: fit-content;
+  max-width: 118px;
+  padding: 3px 7px;
+  border: 1px solid #2c352c;
+  border-radius: 999px;
+  color: #9aa39a;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.queue-readiness span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-readiness--ready {
+  color: #1ed760;
+  border-color: rgba(30, 215, 96, 0.35);
+  background: rgba(30, 215, 96, 0.08);
+}
+
+.queue-readiness--foreground-only {
+  color: #f0c56a;
+  border-color: rgba(240, 197, 106, 0.35);
+  background: rgba(240, 197, 106, 0.08);
+}
+
+.queue-readiness--missing-video,
+.queue-readiness--missing-preview,
+.queue-readiness--provider-timeout,
+.queue-readiness--offline,
+.queue-readiness--unavailable {
+  color: #ff8a8a;
+  border-color: rgba(255, 138, 138, 0.35);
+  background: rgba(255, 138, 138, 0.08);
+}
+
 .queue-empty {
   color: #9aa39a;
   font-size: 0.82rem;
@@ -2411,6 +2454,78 @@ input[type="range"] {
   color: #7d887d;
   font-size: 0.82rem;
   line-height: 1.55;
+}
+
+.diagnostics-card {
+  gap: 22px;
+}
+
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.diagnostics-grid > div,
+.diagnostics-row {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #242c24;
+  border-radius: 8px;
+  background: #0c110c;
+}
+
+.diagnostics-grid span,
+.diagnostics-row span {
+  display: block;
+  color: #7d887d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.diagnostics-grid strong,
+.diagnostics-row strong {
+  display: block;
+  margin-top: 4px;
+  color: #f5f7f2;
+  font-size: 0.84rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostics-block {
+  display: grid;
+  gap: 10px;
+}
+
+.diagnostics-block-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #9aa39a;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.diagnostics-list {
+  display: grid;
+  gap: 6px;
+}
+
+.diagnostics-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.diagnostics-row span,
+.diagnostics-row strong {
+  margin: 0;
 }
 
 /* ── Row ── */

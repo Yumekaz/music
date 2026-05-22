@@ -4,6 +4,7 @@ import {
   estimateChromeResumePositionMs,
   estimateLoopAlignedPositionMs,
   estimateWallClockPositionMs,
+  getBrowserCapabilities,
   isOfficialChromeAndroid,
   shouldUseChromeAndroidBackgroundFallback
 } from "./browserPlayback.js";
@@ -35,6 +36,20 @@ describe("browser playback helpers", () => {
       { mobileBackgroundFallback: false },
       { userAgent: chromeAndroidUa }
     )).toBe(false);
+  });
+
+  it("summarizes the browser capability matrix in one place", () => {
+    expect(getBrowserCapabilities(
+      { mobileBackgroundFallback: true },
+      { userAgent: chromeAndroidUa, mediaSession: {}, wakeLock: {} }
+    )).toMatchObject({
+      isMobileBrowser: true,
+      isOfficialChromeAndroid: true,
+      supportsMediaSession: true,
+      supportsWakeLock: true,
+      chromeBackgroundFallbackEnabled: true,
+      backgroundStrategy: "chrome-audio-fallback"
+    });
   });
 
   it("keeps resume aligned to the preview position the user actually heard", () => {

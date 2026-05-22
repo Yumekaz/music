@@ -25,29 +25,33 @@ describe("playerStore", () => {
     usePlayerStore.setState({
       currentTrack: null,
       sourceType: "youtube",
+      activeEngine: "none",
+      playbackFailure: null,
       isPlaying: false,
       positionMs: 0,
       durationMs: 0,
-      queue: []
+      queue: [],
+      queueReadiness: {},
+      skippedUnavailableTrackIds: {}
     });
   });
 
-  it("starts a selected track", () => {
-    usePlayerStore.getState().playTrack(track, "preview");
+  it("starts a selected track", async () => {
+    await usePlayerStore.getState().playTrack(track, "preview");
 
     expect(usePlayerStore.getState().currentTrack.id).toBe(track.id);
     expect(usePlayerStore.getState().sourceType).toBe("preview");
     expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
 
-  it("uses direct preview playback when a youtube track has a playable preview", () => {
-    usePlayerStore.getState().playTrack({ ...track, previewUrl: "/api/audio/preview/track-blinding-lights" }, "youtube");
+  it("uses direct preview playback when a youtube track has a playable preview", async () => {
+    await usePlayerStore.getState().playTrack({ ...track, previewUrl: "/api/audio/preview/track-blinding-lights" }, "youtube");
 
     expect(usePlayerStore.getState().sourceType).toBe("preview");
     expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
 
-  it("resolves to preview in background on mobile when mobileBackgroundFallback is enabled", () => {
+  it("resolves to preview in background on mobile when mobileBackgroundFallback is enabled", async () => {
     const originalUserAgent = navigator.userAgent;
     Object.defineProperty(navigator, "userAgent", {
       value: "Android Mobile",
@@ -68,7 +72,7 @@ describe("playerStore", () => {
       previewUrl: "/api/audio/preview/track-blinding-lights"
     };
 
-    usePlayerStore.getState().playTrack(mobileTrack, "youtube");
+    await usePlayerStore.getState().playTrack(mobileTrack, "youtube");
 
     expect(usePlayerStore.getState().sourceType).toBe("youtube");
 
@@ -84,17 +88,17 @@ describe("playerStore", () => {
     });
   });
 
-  it("advances through the queue", () => {
+  it("advances through the queue", async () => {
     const second = { ...track, id: "track-two", title: "Second" };
     usePlayerStore.getState().setQueue([track, second]);
-    usePlayerStore.getState().playTrack(track, "youtube");
-    usePlayerStore.getState().next();
+    await usePlayerStore.getState().playTrack(track, "youtube");
+    await usePlayerStore.getState().next();
 
     expect(usePlayerStore.getState().currentTrack.id).toBe("track-two");
   });
 
-  it("handles play/pause and seeking", () => {
-    usePlayerStore.getState().playTrack(track, "youtube");
+  it("handles play/pause and seeking", async () => {
+    await usePlayerStore.getState().playTrack(track, "youtube");
     expect(usePlayerStore.getState().isPlaying).toBe(true);
 
     usePlayerStore.getState().pause();

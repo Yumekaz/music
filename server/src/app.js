@@ -1,6 +1,5 @@
 import cors from "cors";
 import express from "express";
-import { getProviderStatus } from "./config/env.js";
 import { errorHandler, notFound } from "./middleware/validate.js";
 import albumsRoutes from "./routes/albums.routes.js";
 import artistsRoutes from "./routes/artists.routes.js";
@@ -9,6 +8,7 @@ import discoveryRoutes from "./routes/discovery.routes.js";
 import providersRoutes from "./routes/providers.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import tracksRoutes from "./routes/tracks.routes.js";
+import { getProviderStatusSnapshot } from "./services/providerHealth.service.js";
 
 export function createApp({ corsOrigin } = {}) {
   const app = express();
@@ -24,7 +24,7 @@ export function createApp({ corsOrigin } = {}) {
     response.json({
       ok: true,
       name: "music-app-v3-api",
-      providerStatus: getProviderStatus()
+      providerStatus: getProviderStatusSnapshot()
     });
   });
 

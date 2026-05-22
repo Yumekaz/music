@@ -9,15 +9,12 @@ import { useColorExtract } from "../hooks/useColorExtract.js";
 import { useDirectAudio } from "../hooks/useDirectAudio.js";
 import { isDirectAudioSource } from "../lib/resolvers.js";
 import { usePlayerStore } from "../store/playerStore.js";
-import { useToast } from "../components/common/ToastProvider.jsx";
-import { playDirectAudio, pauseDirectAudio } from "../lib/directAudio.js";
 import { ProgressBar } from "../components/player/ProgressBar.jsx";
 import { PlayerControls } from "../components/player/PlayerControls.jsx";
 import { VolumeControl } from "../components/player/VolumeControl.jsx";
 
 export default function NowPlaying() {
   const navigate = useNavigate();
-  const showToast = useToast();
   const {
     currentTrack,
     sourceType,
@@ -28,8 +25,7 @@ export default function NowPlaying() {
     setPosition,
     setDuration,
     setVolume,
-    pause,
-    resume,
+    seek,
     togglePlay,
     next,
     previous
@@ -61,24 +57,8 @@ export default function NowPlaying() {
 
   const disabled = false;
 
-  async function handleToggle() {
+  function handleToggle() {
     if (!currentTrack) return;
-    if (directEnabled) {
-      if (isPlaying) {
-        pauseDirectAudio();
-        pause();
-        return;
-      }
-      try {
-        await playDirectAudio(currentTrack, sourceType);
-      } catch (err) {
-        console.warn("Playback of direct audio failed:", err);
-        showToast?.("Could not play preview track.");
-      } finally {
-        resume();
-      }
-      return;
-    }
     togglePlay();
   }
 
@@ -116,10 +96,7 @@ export default function NowPlaying() {
           <ProgressBar 
             positionMs={positionMs} 
             durationMs={durationMs} 
-            onSeek={(pos) => {
-              setPosition(pos);
-              usePlayerStore.getState().setSeekTarget(pos);
-            }}
+            onSeek={seek}
           />
           <PlayerControls 
             disabled={disabled} 
@@ -141,4 +118,3 @@ export default function NowPlaying() {
     </div>
   );
 }
-
