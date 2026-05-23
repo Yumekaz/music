@@ -5,9 +5,11 @@ export const useSettingsStore = create(
   persist(
     (set) => ({
       equalizerOpen: false,
+      equalizerEnabled: false,
       equalizerPreset: "Normal",
       equalizerGains: [0, 0, 0, 0, 0, 0, 0, 0],
       setEqualizerOpen: (equalizerOpen) => set({ equalizerOpen }),
+      setEqualizerEnabled: (equalizerEnabled) => set({ equalizerEnabled }),
       setEqualizerPreset: (equalizerPreset, equalizerGains) => set({ equalizerPreset, equalizerGains }),
       setBandGain: (index, value) =>
         set((state) => ({
@@ -32,13 +34,25 @@ export const useSettingsStore = create(
     {
       name: "music-app-settings",
       partialize: (state) => ({
-        equalizerOpen: state.equalizerOpen,
+        equalizerEnabled: state.equalizerEnabled,
         equalizerPreset: state.equalizerPreset,
         equalizerGains: state.equalizerGains,
         crossfadeDuration: state.crossfadeDuration,
         playbackQuality: state.playbackQuality,
         mobileBackgroundFallback: state.mobileBackgroundFallback,
       }),
+      merge: (persistedState, currentState) => {
+        const saved = persistedState && typeof persistedState === "object" ? persistedState : {};
+        return {
+          ...currentState,
+          ...saved,
+          equalizerEnabled:
+            typeof saved.equalizerEnabled === "boolean"
+              ? saved.equalizerEnabled
+              : Boolean(saved.equalizerOpen),
+          equalizerOpen: false
+        };
+      }
     }
   )
 );

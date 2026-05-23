@@ -6,21 +6,30 @@ import { EQUALIZER_PRESETS } from "./EqualizerPresets.js";
 export function Equalizer({ audioRef, enabled }) {
   const {
     equalizerOpen,
+    equalizerEnabled,
     equalizerPreset,
     equalizerGains,
     setBandGain,
+    setEqualizerEnabled,
     setEqualizerOpen,
     setEqualizerPreset
   } = useSettingsStore();
-  const { bands } = useEqualizer(audioRef, enabled && equalizerOpen, equalizerGains);
+  const { bands } = useEqualizer(audioRef, enabled && equalizerEnabled, equalizerGains);
+
+  function togglePanel() {
+    const nextOpen = !equalizerOpen;
+    setEqualizerOpen(nextOpen);
+    if (nextOpen && !equalizerEnabled) setEqualizerEnabled(true);
+  }
 
   return (
     <section className="equalizer" aria-label="Equalizer">
       <button
         type="button"
         className="utility-button"
-        onClick={() => setEqualizerOpen(!equalizerOpen)}
+        onClick={togglePanel}
         aria-expanded={equalizerOpen}
+        aria-pressed={equalizerEnabled}
       >
         <SlidersHorizontal size={16} aria-hidden="true" />
         <span>EQ</span>
@@ -55,7 +64,7 @@ export function Equalizer({ audioRef, enabled }) {
                   max="12"
                   step="1"
                   value={equalizerGains[index]}
-                  disabled={!enabled}
+                  disabled={!enabled || !equalizerEnabled}
                   onChange={(event) => setBandGain(index, Number(event.target.value))}
                   aria-label={`${band.label} Hz gain`}
                 />

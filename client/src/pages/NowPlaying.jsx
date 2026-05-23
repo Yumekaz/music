@@ -1,5 +1,6 @@
 import { ChevronDown, ExternalLink } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Equalizer } from "../components/equalizer/Equalizer.jsx";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { LyricsPanel } from "../components/lyrics/LyricsPanel.jsx";
@@ -12,9 +13,13 @@ import { usePlayerStore } from "../store/playerStore.js";
 import { ProgressBar } from "../components/player/ProgressBar.jsx";
 import { PlayerControls } from "../components/player/PlayerControls.jsx";
 import { VolumeControl } from "../components/player/VolumeControl.jsx";
+import { useSettingsStore } from "../store/settingsStore.js";
 
 export default function NowPlaying() {
   const navigate = useNavigate();
+  const equalizerOpen = useSettingsStore((state) => state.equalizerOpen);
+  const setEqualizerOpen = useSettingsStore((state) => state.setEqualizerOpen);
+  const equalizerHistoryPushedRef = useRef(false);
   const {
     currentTrack,
     sourceType,
@@ -46,16 +51,59 @@ export default function NowPlaying() {
 
   const dominantColor = useColorExtract(currentTrack?.artworkUrl);
 
+  useEffect(() => {
+    return () => {
+      setEqualizerOpen(false);
+    };
+  }, [setEqualizerOpen]);
+
+  useEffect(() => {
+    function handlePopState() {
+      if (!equalizerHistoryPushedRef.current || !useSettingsStore.getState().equalizerOpen) return;
+      equalizerHistoryPushedRef.current = false;
+      setEqualizerOpen(false);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [setEqualizerOpen]);
+
+  useEffect(() => {
+    if (!currentTrack) return;
+
+    if (equalizerOpen && !equalizerHistoryPushedRef.current) {
+      window.history.pushState(
+        { ...(window.history.state || {}), nowPlayingPanel: "equalizer" },
+        "",
+        window.location.href
+      );
+      equalizerHistoryPushedRef.current = true;
+      return;
+    }
+
+    if (!equalizerOpen && equalizerHistoryPushedRef.current) {
+      equalizerHistoryPushedRef.current = false;
+      window.history.back();
+    }
+  }, [currentTrack, equalizerOpen]);
+
   if (!currentTrack) {
-    return (
-      <div className="empty-page">
-        <h1>Nothing playing</h1>
-        <p>Start a track from Home or Search.</p>
-      </div>
-    );
+    return <Navigate to="/" replace />;
   }
 
   const disabled = false;
+
+  function handleBack() {
+    if (equalizerOpen) {
+      setEqualizerOpen(false);
+      if (equalizerHistoryPushedRef.current) {
+        equalizerHistoryPushedRef.current = false;
+        window.history.back();
+      }
+      return;
+    }
+    navigate(-1);
+  }
 
   function handleToggle() {
     if (!currentTrack) return;
@@ -68,7 +116,7 @@ export default function NowPlaying() {
       style={dominantColor ? { background: `linear-gradient(180deg, rgba(${dominantColor}, 0.35) 0%, #080b0a 60%)` } : undefined}
     >
       <header className="now-playing-header">
-        <button type="button" className="now-playing-back" onClick={() => navigate(-1)} aria-label="Go back">
+        <button type="button" className="now-playing-back" onClick={handleBack} aria-label="Go back">
           <ChevronDown size={28} />
         </button>
         <span className="now-playing-header-title">Now Playing</span>

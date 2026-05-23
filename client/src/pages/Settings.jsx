@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, Bug, ChevronDown, RotateCcw, Music2, Server, SlidersHorizontal, Tv2 } from "lucide-react";
+import { Activity, Bug, ChevronDown, Github, RotateCcw, Music2, Server, SlidersHorizontal, Tv2 } from "lucide-react";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useEqualizer } from "../hooks/useEqualizer.js";
@@ -41,8 +41,8 @@ export default function Settings() {
   const {
     crossfadeDuration,   setCrossfadeDuration,
     playbackQuality,     setPlaybackQuality,
-    equalizerPreset,     equalizerGains, equalizerOpen,
-    setBandGain,         setEqualizerPreset, setEqualizerOpen,
+    equalizerPreset,     equalizerGains, equalizerEnabled,
+    setBandGain,         setEqualizerPreset, setEqualizerEnabled,
     mobileBackgroundFallback, setMobileBackgroundFallback,
   } = useSettingsStore();
 
@@ -63,7 +63,7 @@ export default function Settings() {
       ? (document.querySelector("audio") ?? null)
       : null
   );
-  useEqualizer(audioRef, directEnabled && equalizerOpen, equalizerGains);
+  useEqualizer(audioRef, directEnabled && equalizerEnabled, equalizerGains);
 
   function resetEQ() {
     setEqualizerPreset("Normal", EQUALIZER_PRESETS["Normal"]);
@@ -317,15 +317,15 @@ export default function Settings() {
             <button
               type="button"
               role="switch"
-              aria-checked={equalizerOpen}
-              className={`toggle-switch ${equalizerOpen ? "on" : ""}`}
-              onClick={() => setEqualizerOpen(!equalizerOpen)}
+              aria-checked={equalizerEnabled}
+              className={`toggle-switch ${equalizerEnabled ? "on" : ""}`}
+              onClick={() => setEqualizerEnabled(!equalizerEnabled)}
             >
               <span className="toggle-thumb" />
             </button>
           </div>
 
-          {equalizerOpen && (
+          {equalizerEnabled && (
             <>
               {/* Presets */}
               <div className="eq-preset-row">
@@ -385,6 +385,21 @@ export default function Settings() {
               )}
             </>
           )}
+        </div>
+      </section>
+
+      <section className="settings-section settings-credit-section" aria-label="App credits">
+        <div className="settings-credit-card">
+          <span>Built by Mihir</span>
+          <a
+            href="https://github.com/Yumekaz/music"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open Mihir's GitHub repository"
+          >
+            <Github size={16} aria-hidden="true" />
+            <span>GitHub repo</span>
+          </a>
         </div>
       </section>
     </div>

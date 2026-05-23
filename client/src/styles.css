@@ -2514,6 +2514,36 @@ input[type="range"] {
   line-height: 1.55;
 }
 
+.settings-credit-section {
+  margin-top: -10px;
+}
+
+.settings-credit-card {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-top: 1px solid #242c24;
+  color: #7d887d;
+  font-size: 0.82rem;
+}
+
+.settings-credit-card a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #f5f7f2;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.settings-credit-card a:hover,
+.settings-credit-card a:focus-visible {
+  color: #1ed760;
+}
+
 .diagnostics-card {
   gap: 22px;
 }
@@ -2998,6 +3028,11 @@ input[type="range"] {
 
   .eq-bands-full {
     grid-template-columns: repeat(4, 1fr);
+  }
+
+  .settings-credit-card {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
