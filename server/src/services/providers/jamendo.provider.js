@@ -37,6 +37,7 @@ export async function searchJamendo(query, limit = 5) {
     durationMs: Number(track.duration || 0) * 1000,
     artworkUrl: track.album_image || track.image || "",
     previewUrl: track.audio || "",
+    jamendoUrl: track.audio || "",
     source: "jamendo"
   }));
 }

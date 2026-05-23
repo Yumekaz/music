@@ -75,6 +75,7 @@ export async function resolveTrack({ title, artist }) {
         ...fallback,
         jamendoId: jamendoResults[0].jamendoId,
         previewUrl: jamendoResults[0].previewUrl || fallback.previewUrl,
+        jamendoUrl: jamendoResults[0].jamendoUrl || jamendoResults[0].previewUrl || fallback.jamendoUrl,
         availableProviders: [...new Set([...fallback.availableProviders, "jamendo"])]
       }
     ].filter(Boolean);
@@ -101,6 +102,7 @@ export async function resolveTrack({ title, artist }) {
       if (jamendoResults?.[0]) {
         if (!best.jamendoId) best.jamendoId = jamendoResults[0].jamendoId;
         if (!best.previewUrl) best.previewUrl = jamendoResults[0].previewUrl;
+        if (!best.jamendoUrl) best.jamendoUrl = jamendoResults[0].jamendoUrl || jamendoResults[0].previewUrl;
       }
       if (jiosaavnResult) {
         if (!best.artworkUrl) best.artworkUrl = jiosaavnResult.artworkUrl;

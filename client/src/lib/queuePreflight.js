@@ -1,4 +1,8 @@
 import { shouldUseChromeAndroidBackgroundFallback } from "./browserCapabilities.js";
+import {
+  getChromeForegroundOnlyReason,
+  hasChromeBackgroundAudioSource
+} from "./chromeBackgroundAudio.js";
 
 export const QUEUE_READINESS = Object.freeze({
   READY: "ready",
@@ -47,7 +51,7 @@ export function getPlayerReadinessMessage(readiness) {
   const status = typeof readiness === "string" ? readiness : readiness?.status;
   switch (status) {
     case QUEUE_READINESS.FOREGROUND_ONLY:
-      return "Preview missing for Chrome background";
+      return readiness?.reason || "Chrome background unavailable for YouTube";
     case QUEUE_READINESS.MISSING_PREVIEW:
       return "Preview missing for this source";
     case QUEUE_READINESS.MISSING_VIDEO:
@@ -98,10 +102,13 @@ export function classifyTrackReadiness(track, options = {}) {
   }
 
   if (hasVideo) {
-    if (shouldUseChromeAndroidBackgroundFallback(settings, navigatorLike) && !directFallback) {
+    if (
+      shouldUseChromeAndroidBackgroundFallback(settings, navigatorLike) &&
+      !hasChromeBackgroundAudioSource(track)
+    ) {
       return checked(
         QUEUE_READINESS.FOREGROUND_ONLY,
-        "YouTube works in foreground; Chrome background preview missing"
+        getChromeForegroundOnlyReason(track)
       );
     }
     return checked(QUEUE_READINESS.READY, "YouTube video ready");

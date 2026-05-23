@@ -1,6 +1,10 @@
 import { getDownload } from "./idb.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { isMobileBrowser, shouldUseChromeAndroidBackgroundFallback } from "./browserPlayback.js";
+import {
+  getChromeBackgroundAudioSourceType,
+  hasChromeBackgroundAudioSource
+} from "./chromeBackgroundAudio.js";
 
 let directAudioElement = null;
 let fadeTimer = null;
@@ -348,7 +352,7 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
   const isDirect = sourceType === "preview" || sourceType === "jamendo";
 
   if (isDirect) {
-    audio.loop = Boolean(track?.videoId);
+    audio.loop = false;
     if (isPlaying) {
       if (track) {
         const src = getDirectAudioSourceSync(track, sourceType);
@@ -382,26 +386,30 @@ export function syncAudioStateSync(track, sourceType, isPlaying, volume, options
         return;
       }
 
-      const hasPreview = track && (track.previewUrl || track.jamendoUrl);
-      const targetSrc = hasPreview 
-        ? getDirectAudioSourceSync(track, "preview")
-        : getSilenceWavUrl();
-
-      // Dynamic Fallback Volume: play fallback preview at user volume when hidden, else keep-alive silent
       const isHidden = typeof document !== "undefined" && document.visibilityState === "hidden";
-      const targetVolume = (isHidden && hasPreview)
-        ? volume
-        : 0.001;
+      const backgroundSourceType = getChromeBackgroundAudioSourceType(track);
+      const hasBackgroundAudio = hasChromeBackgroundAudioSource(track);
+
+      if (isHidden && !hasBackgroundAudio) {
+        audio.pause();
+        return;
+      }
+
+      const targetSrc = isHidden && hasBackgroundAudio
+        ? getDirectAudioSourceSync(track, backgroundSourceType)
+        : getSilenceWavUrl();
+      const shouldLoop = !(isHidden && hasBackgroundAudio);
+      const targetVolume = isHidden && hasBackgroundAudio ? volume : 0.001;
 
       if (!audioSourceMatches(audio, targetSrc)) {
         setupAudioGraph();
         audio.src = targetSrc;
-        audio.loop = true;
+        audio.loop = shouldLoop;
         audio.volume = targetVolume;
         audio.load();
       } else {
         audio.volume = targetVolume;
-        audio.loop = true;
+        audio.loop = shouldLoop;
       }
       if (audio.paused) {
         audio.play().catch(() => {});

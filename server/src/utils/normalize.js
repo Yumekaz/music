@@ -3,6 +3,7 @@ export function normalizeTrack(track, overrides = {}) {
     id: track.id,
     videoId: track.videoId || "",
     previewUrl: track.previewUrl || "",
+    jamendoUrl: track.jamendoUrl || "",
     jamendoId: track.jamendoId || "",
     title: track.title,
     artistName: track.artistName,
@@ -192,4 +193,3 @@ export function matchesTitleAndArtist(candidateTitle, candidateArtist, targetTit
 
   return hasTitleOverlap && hasArtistOverlap;
 }
-

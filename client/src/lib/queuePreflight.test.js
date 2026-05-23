@@ -11,9 +11,9 @@ const chromeAndroid = {
 };
 
 describe("queue preflight", () => {
-  it("marks Chrome YouTube tracks without preview as foreground-only", () => {
+  it("marks Chrome YouTube tracks without full background audio as foreground-only", () => {
     const readiness = classifyTrackReadiness(
-      { id: "one", title: "Song", videoId: "abc" },
+      { id: "one", title: "Song", videoId: "abc", previewUrl: "/thirty-second-preview.mp3" },
       {
         sourceType: "youtube",
         settings: { mobileBackgroundFallback: true },
@@ -22,6 +22,20 @@ describe("queue preflight", () => {
     );
 
     expect(readiness.status).toBe(QUEUE_READINESS.FOREGROUND_ONLY);
+    expect(readiness.reason).toContain("30s preview");
+  });
+
+  it("allows Chrome YouTube tracks with a full Jamendo fallback", () => {
+    const readiness = classifyTrackReadiness(
+      { id: "one", title: "Song", videoId: "abc", previewUrl: "/preview.mp3", jamendoUrl: "/full-track.mp3" },
+      {
+        sourceType: "youtube",
+        settings: { mobileBackgroundFallback: true },
+        navigatorLike: chromeAndroid
+      }
+    );
+
+    expect(readiness.status).toBe(QUEUE_READINESS.READY);
   });
 
   it("does not punish non-Chrome browser paths for missing preview", () => {

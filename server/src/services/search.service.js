@@ -52,6 +52,7 @@ export async function searchCatalog(query, limit = 8) {
       }
 
       // Find matching Jamendo result
+      let matchedJamendoUrl = "";
       const jamendoMatch = jamendoResults.find((jamTrack, idx) => {
         if (mergedJamendoIds.has(idx)) return false;
         if (matchesTitleAndArtist(jamTrack.title, jamTrack.artistName, result.title, result.artistName)) {
@@ -61,14 +62,23 @@ export async function searchCatalog(query, limit = 8) {
         return false;
       });
 
+      if (jamendoMatch) {
+        matchedJamendoUrl = jamendoMatch.jamendoUrl || jamendoMatch.previewUrl || "";
+      }
+
       return normalizeTrack(fixture || result, {
         ...result,
         id: fixture?.id || result.id,
         lyricsAvailable: fixture?.lyricsAvailable || false,
         previewUrl: fixture?.previewUrl || matchedPreviewUrl || "",
+        jamendoUrl: fixture?.jamendoUrl || matchedJamendoUrl || "",
         durationMs: fixture?.durationMs || result.durationMs || matchedDuration || 0,
         artworkUrl: fixture?.artworkUrl || result.artworkUrl || matchedArtwork || "",
-        availableProviders: fixture?.availableProviders || (matchedPreviewUrl ? ["youtube", "itunes"] : ["youtube"]),
+        availableProviders: fixture?.availableProviders || [
+          "youtube",
+          ...(matchedPreviewUrl ? ["itunes"] : []),
+          ...(matchedJamendoUrl ? ["jamendo"] : [])
+        ],
         externalLinks: fixture?.externalLinks || {
           youtube: result.videoId ? `https://www.youtube.com/watch?v=${result.videoId}` : ""
         }
@@ -104,6 +114,7 @@ export async function searchCatalog(query, limit = 8) {
           artistName: item.artistName,
           albumName: item.albumName,
           previewUrl: item.previewUrl,
+          jamendoUrl: item.jamendoUrl || item.previewUrl,
           durationMs: item.durationMs,
           artworkUrl: item.artworkUrl,
           availableProviders: ["jamendo"],

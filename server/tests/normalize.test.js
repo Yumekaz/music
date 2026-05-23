@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { cleanYoutubeTitleAndArtist, matchesTitleAndArtist } from "../src/utils/normalize.js";
+import { cleanYoutubeTitleAndArtist, matchesTitleAndArtist, normalizeTrack } from "../src/utils/normalize.js";
 
 describe("normalize utils", () => {
+  it("preserves Jamendo full audio URLs separately from previews", () => {
+    const track = normalizeTrack({
+      id: "jamendo-one",
+      title: "Full Song",
+      artistName: "Artist",
+      jamendoUrl: "https://cdn.example/full.mp3",
+      previewUrl: "https://cdn.example/preview.mp3"
+    });
+
+    expect(track.jamendoUrl).toBe("https://cdn.example/full.mp3");
+    expect(track.previewUrl).toBe("https://cdn.example/preview.mp3");
+  });
+
   describe("cleanYoutubeTitleAndArtist", () => {
     it("cleans brackets, feature tags, official tags, and parses Artist - Title correctly", () => {
       const res1 = cleanYoutubeTitleAndArtist(

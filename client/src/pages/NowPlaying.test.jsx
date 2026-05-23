@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import NowPlaying from "./NowPlaying.jsx";
+import { useLibraryStore } from "../store/libraryStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 
@@ -58,6 +59,12 @@ describe("NowPlaying", () => {
       volume: 0.8,
       queue: []
     });
+    useLibraryStore.setState({
+      likedTracks: [],
+      playlists: [],
+      downloads: [],
+      hydrated: true
+    });
     useSettingsStore.setState({
       equalizerOpen: false,
       equalizerEnabled: false,
@@ -90,5 +97,37 @@ describe("NowPlaying", () => {
     expect(useSettingsStore.getState().equalizerOpen).toBe(false);
     expect(screen.queryByRole("combobox", { name: "Preset:" })).not.toBeInTheDocument();
     expect(screen.getByTestId("location")).toHaveTextContent("/now-playing");
+  });
+
+  it("shows favorite and bottom sheet playlist actions on the full player", async () => {
+    usePlayerStore.setState({
+      currentTrack: track,
+      sourceType: "youtube",
+      durationMs: track.durationMs
+    });
+    useLibraryStore.setState({
+      likedTracks: [],
+      playlists: [{ id: "playlist-road-trip", name: "Road Trip", tracks: [] }],
+      downloads: [],
+      hydrated: true
+    });
+
+    renderNowPlaying();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add to favorites" }));
+
+    await waitFor(() => {
+      expect(useLibraryStore.getState().isLiked(track.id)).toBe(true);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "More options" }));
+    expect(screen.getByRole("dialog", { name: "Track options" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add to playlist" }));
+    fireEvent.click(screen.getByRole("button", { name: "Road Trip" }));
+
+    await waitFor(() => {
+      expect(useLibraryStore.getState().playlists[0].tracks).toEqual([track]);
+    });
   });
 });

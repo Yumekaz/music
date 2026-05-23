@@ -4,6 +4,10 @@ import { useSettingsStore } from "../store/settingsStore.js";
 import { getDirectAudioElement, syncAudioStateSync } from "./directAudio.js";
 import { shouldUseChromeAndroidBackgroundFallback } from "./browserCapabilities.js";
 import { isReadinessBlocking, getPlayerReadinessMessage } from "./queuePreflight.js";
+import {
+  getChromeForegroundOnlyReason,
+  hasChromeBackgroundAudioSource
+} from "./chromeBackgroundAudio.js";
 
 export const PLAYBACK_ENGINES = Object.freeze({
   YOUTUBE_IFRAME: "youtube-iframe",
@@ -28,7 +32,8 @@ export function resolvePlaybackEngine(track, sourceType, settings, navigatorLike
   if (isDirectSourceType(resolvedSourceType)) return PLAYBACK_ENGINES.DIRECT_AUDIO;
 
   if (resolvedSourceType === "youtube") {
-    return shouldUseChromeAndroidBackgroundFallback(settings, navigatorLike)
+    return shouldUseChromeAndroidBackgroundFallback(settings, navigatorLike) &&
+      hasChromeBackgroundAudioSource(track)
       ? PLAYBACK_ENGINES.CHROME_FALLBACK
       : PLAYBACK_ENGINES.YOUTUBE_IFRAME;
   }
@@ -60,6 +65,10 @@ function playbackFailure(message, extra = {}) {
 
 function getTrackArtist(track) {
   return track?.artistName || track?.artist || "";
+}
+
+function isDocumentHidden() {
+  return typeof document !== "undefined" && document.visibilityState === "hidden";
 }
 
 function updateAudioState(get) {
@@ -112,11 +121,11 @@ function markSkipped(set, track, readiness) {
 }
 
 export function createPlaybackController({ get, set }) {
-  function resolveChromePreviewIfNeeded(track, sourceType, volume) {
+  function resolveChromeBackgroundAudioIfNeeded(track, sourceType, volume) {
     const settings = useSettingsStore.getState();
     const chromeBackgroundFallback = shouldUseChromeAndroidBackgroundFallback(settings);
 
-    if (!track || !chromeBackgroundFallback || sourceType !== "youtube" || track.previewUrl) {
+    if (!track || !chromeBackgroundFallback || sourceType !== "youtube" || hasChromeBackgroundAudioSource(track)) {
       return track;
     }
 
@@ -127,7 +136,7 @@ export function createPlaybackController({ get, set }) {
       isBuffering: true,
       positionMs: 0,
       durationMs: track?.durationMs || 0,
-      activeEngine: PLAYBACK_ENGINES.CHROME_FALLBACK
+      activeEngine: PLAYBACK_ENGINES.YOUTUBE_IFRAME
     });
 
     syncAudioStateSync(track, "youtube", true, volume);
@@ -137,11 +146,10 @@ export function createPlaybackController({ get, set }) {
 
     return resolveTrack(title, getTrackArtist(track))
       .then((resolved) => {
-        if (!resolved?.previewUrl) return track;
+        if (!resolved?.jamendoUrl) return track;
         return {
           ...track,
-          previewUrl: resolved.previewUrl,
-          jamendoUrl: resolved.jamendoUrl || track.jamendoUrl
+          jamendoUrl: resolved.jamendoUrl
         };
       })
       .catch(() => {
@@ -157,33 +165,34 @@ export function createPlaybackController({ get, set }) {
 
   async function playTrack(track, sourceType = "youtube") {
     const { volume } = get();
-    const previewResult = resolveChromePreviewIfNeeded(track, sourceType, volume);
-    const trackToPlay = previewResult && typeof previewResult.then === "function"
-      ? await previewResult
-      : previewResult;
+    const backgroundResult = resolveChromeBackgroundAudioIfNeeded(track, sourceType, volume);
+    const trackToPlay = backgroundResult && typeof backgroundResult.then === "function"
+      ? await backgroundResult
+      : backgroundResult;
     const resolvedSourceType = resolveSourceType(trackToPlay, sourceType);
     const settings = useSettingsStore.getState();
     const activeEngine = resolvePlaybackEngine(trackToPlay, resolvedSourceType, settings);
-
-    syncAudioStateSync(trackToPlay, resolvedSourceType, true, volume);
-
-    const missingChromePreview =
-      activeEngine === PLAYBACK_ENGINES.CHROME_FALLBACK &&
+    const chromeForegroundOnly =
+      shouldUseChromeAndroidBackgroundFallback(settings) &&
       resolvedSourceType === "youtube" &&
-      !trackToPlay?.previewUrl &&
-      !trackToPlay?.jamendoUrl;
+      !hasChromeBackgroundAudioSource(trackToPlay);
+    const documentHidden = isDocumentHidden();
+    const shouldPlay = Boolean(trackToPlay) && !(chromeForegroundOnly && documentHidden);
+
+    syncAudioStateSync(trackToPlay, resolvedSourceType, shouldPlay, volume);
+
     const previousFailure = get().playbackFailure;
 
     set({
       currentTrack: trackToPlay,
       sourceType: resolvedSourceType,
-      isPlaying: Boolean(trackToPlay),
+      isPlaying: shouldPlay,
       isBuffering: false,
       positionMs: 0,
       durationMs: trackToPlay?.durationMs || 0,
       activeEngine,
-      playbackFailure: missingChromePreview
-        ? playbackFailure("Preview missing for Chrome background", {
+      playbackFailure: chromeForegroundOnly && documentHidden
+        ? playbackFailure(getChromeForegroundOnlyReason(trackToPlay), {
             trackId: trackToPlay?.id,
             status: "foreground-only"
           })

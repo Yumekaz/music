@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useSettingsStore } from "./settingsStore.js";
 import { usePlayerStore } from "./playerStore.js";
 
 vi.mock("../lib/directAudio.js", () => ({
@@ -22,6 +23,7 @@ const track = {
 
 describe("playerStore", () => {
   beforeEach(() => {
+    useSettingsStore.setState({ mobileBackgroundFallback: false });
     usePlayerStore.setState({
       currentTrack: null,
       sourceType: "youtube",
@@ -51,10 +53,10 @@ describe("playerStore", () => {
     expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
 
-  it("resolves to preview in background on mobile when mobileBackgroundFallback is enabled", async () => {
+  it("keeps Chrome preview-only YouTube tracks foreground-only while hidden", async () => {
     const originalUserAgent = navigator.userAgent;
     Object.defineProperty(navigator, "userAgent", {
-      value: "Android Mobile",
+      value: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
       writable: true,
       configurable: true
     });
@@ -72,20 +74,25 @@ describe("playerStore", () => {
       previewUrl: "/api/audio/preview/track-blinding-lights"
     };
 
-    await usePlayerStore.getState().playTrack(mobileTrack, "youtube");
+    try {
+      useSettingsStore.setState({ mobileBackgroundFallback: true });
+      await usePlayerStore.getState().playTrack(mobileTrack, "youtube");
 
-    expect(usePlayerStore.getState().sourceType).toBe("youtube");
-
-    Object.defineProperty(navigator, "userAgent", {
-      value: originalUserAgent,
-      writable: true,
-      configurable: true
-    });
-    Object.defineProperty(document, "visibilityState", {
-      value: originalVisibilityState,
-      writable: true,
-      configurable: true
-    });
+      expect(usePlayerStore.getState().sourceType).toBe("youtube");
+      expect(usePlayerStore.getState().isPlaying).toBe(false);
+      expect(usePlayerStore.getState().playbackFailure.message).toContain("30s preview");
+    } finally {
+      Object.defineProperty(navigator, "userAgent", {
+        value: originalUserAgent,
+        writable: true,
+        configurable: true
+      });
+      Object.defineProperty(document, "visibilityState", {
+        value: originalVisibilityState,
+        writable: true,
+        configurable: true
+      });
+    }
   });
 
   it("advances through the queue", async () => {

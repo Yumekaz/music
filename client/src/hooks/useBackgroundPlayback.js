@@ -4,11 +4,18 @@ import { useSettingsStore } from "../store/settingsStore.js";
 import { audioSourceMatches, getDirectAudioElement, syncAudioStateSync, getDirectAudioSourceSync } from "../lib/directAudio.js";
 import {
   CHROME_RESUME_SEEK_LEAD_MS,
+  clampPlaybackPositionMs,
+  clearChromeBackgroundHandoff,
   estimateChromeResumePositionMs,
   getChromeBackgroundHandoff,
   setChromeBackgroundHandoff,
   shouldUseChromeAndroidBackgroundFallback
 } from "../lib/browserPlayback.js";
+import {
+  getChromeBackgroundAudioSourceType,
+  getChromeForegroundOnlyReason,
+  hasChromeBackgroundAudioSource
+} from "../lib/chromeBackgroundAudio.js";
 
 /**
  * Chrome Android aggressively throttles / freezes background tabs.
@@ -28,6 +35,28 @@ import {
  *    element (as opposed to only an iframe). This buys significant extra
  *    background time on Chrome Android.
  */
+function getFiniteAudioDurationSeconds(audio, fallbackMs = 0) {
+  const audioDuration = Number(audio?.duration);
+  if (Number.isFinite(audioDuration) && audioDuration > 0) return audioDuration;
+  const fallbackSeconds = Number(fallbackMs) / 1000;
+  return Number.isFinite(fallbackSeconds) && fallbackSeconds > 0 ? fallbackSeconds : 0;
+}
+
+function clampAudioSeconds(seconds, durationSeconds = 0) {
+  const position = Math.max(0, Number(seconds) || 0);
+  if (!durationSeconds) return position;
+  return Math.min(position, Math.max(0, durationSeconds - 1));
+}
+
+function buildPlaybackFailure(message, trackId, status = "foreground-only") {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    message,
+    trackId,
+    status
+  };
+}
+
 export function useBackgroundPlayback() {
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const sourceType = usePlayerStore((state) => state.sourceType);
@@ -91,7 +120,7 @@ export function useBackgroundPlayback() {
   }, [isPlaying, currentTrack]);
 
   // ── 2. Visibility change & Background playback logic ───────────
-  // Automatically switch to audio preview if browser is minimized on mobile,
+  // Automatically switch to full direct audio if Chrome is minimized on mobile,
   // and recover when returning to the tab.
   useEffect(() => {
     function handleVisibilityChange() {
@@ -104,12 +133,14 @@ export function useBackgroundPlayback() {
           chromeFallbackEnabled &&
           state.isPlaying &&
           state.sourceType === "youtube" &&
-          state.currentTrack?.previewUrl
+          state.currentTrack
         ) {
+          const backgroundSourceType = getChromeBackgroundAudioSourceType(state.currentTrack);
+          const hasBackgroundAudio = hasChromeBackgroundAudioSource(state.currentTrack);
           fallbackTriggeredRef.current = true;
           const hiddenAtMs = Date.now();
 
-          // Get the active YouTube player and pause it immediately to prevent double audio overlay
+          // Get the active YouTube player and pause it immediately to prevent double audio overlay.
           const activePlayer = window.activeYTPlayer;
           let currentPos = state.positionMs;
 
@@ -132,14 +163,36 @@ export function useBackgroundPlayback() {
             }
           }
 
+          if (!hasBackgroundAudio) {
+            fallbackTriggeredRef.current = false;
+            clearChromeBackgroundHandoff();
+            const audio = getDirectAudioElement();
+            audio?.pause();
+            syncAudioStateSync(state.currentTrack, "youtube", false, state.volume);
+            usePlayerStore.setState({
+              isPlaying: false,
+              isBuffering: false,
+              playbackFailure: buildPlaybackFailure(
+                getChromeForegroundOnlyReason(state.currentTrack),
+                state.currentTrack.id
+              )
+            });
+            window.ytBackgroundFallbackTriggered = false;
+            window.ytMinimizedYouTubePos = currentPos;
+            window.ytMinimizedPreviewPos = 0;
+            window.ytMinimizedTime = hiddenAtMs;
+            return;
+          }
+
           const audio = getDirectAudioElement();
           const fallbackSession = {
             id: `${state.currentTrack.id}-${hiddenAtMs}`,
             trackId: state.currentTrack.id,
             videoId: state.currentTrack.videoId || "",
+            sourceType: backgroundSourceType,
             anchorPositionMs: currentPos,
             anchorPreviewSeconds: 0,
-            loopDurationSeconds: 30,
+            loopDurationSeconds: 0,
             hiddenAtMs,
             durationMs: state.durationMs || state.currentTrack.durationMs || 0,
             returnTargetMs: null
@@ -154,52 +207,51 @@ export function useBackgroundPlayback() {
               loadedMetadataListenerRef.current = null;
             }
 
-            audio.loop = true;
-            const targetSrc = getDirectAudioSourceSync(state.currentTrack, "preview");
+            audio.loop = false;
+            const targetSrc = getDirectAudioSourceSync(state.currentTrack, backgroundSourceType);
 
             const applySeek = () => {
               try {
-                const dur = audio.duration;
-                const loopDur = (dur && !isNaN(dur)) ? dur : 30;
-                const startPos = (currentPos / 1000) % loopDur;
+                const durationSeconds = getFiniteAudioDurationSeconds(audio, fallbackSession.durationMs);
+                const startPos = clampAudioSeconds(currentPos / 1000, durationSeconds);
 
                 audio.currentTime = startPos;
                 fallbackSession.anchorPreviewSeconds = startPos;
-                fallbackSession.loopDurationSeconds = loopDur;
+                fallbackSession.loopDurationSeconds = durationSeconds;
                 setChromeBackgroundHandoff(fallbackSession);
 
                 window.ytBackgroundFallbackTriggered = true;
                 window.ytMinimizedYouTubePos = currentPos;
                 window.ytMinimizedPreviewPos = startPos;
                 window.ytMinimizedTime = hiddenAtMs;
-                console.log(`[useBackgroundPlayback] Fallback audio seeked to ${startPos}s (duration: ${loopDur}s)`);
+                console.log(`[useBackgroundPlayback] Background audio seeked to ${startPos}s (duration: ${durationSeconds || "unknown"}s)`);
               } catch (err) {
                 console.error("[useBackgroundPlayback] Failed to seek fallback audio on load:", err);
               }
             };
 
             // Chrome Android can stall background range requests if we seek right as the tab is hidden.
-            // The foreground sync loop keeps this element close enough, so prefer its current position.
+            // If the same full source is already loaded, prefer its current position and avoid a fresh seek.
             if (audioSourceMatches(audio, targetSrc) && audio.readyState >= 1) {
-              const dur = audio.duration;
-              fallbackSession.anchorPreviewSeconds = audio.currentTime;
-              fallbackSession.loopDurationSeconds = (dur && !isNaN(dur)) ? dur : 30;
+              const durationSeconds = getFiniteAudioDurationSeconds(audio, fallbackSession.durationMs);
+              fallbackSession.anchorPreviewSeconds = clampAudioSeconds(audio.currentTime, durationSeconds);
+              fallbackSession.loopDurationSeconds = durationSeconds;
               setChromeBackgroundHandoff(fallbackSession);
 
               window.ytBackgroundFallbackTriggered = true;
               window.ytMinimizedYouTubePos = currentPos;
-              window.ytMinimizedPreviewPos = audio.currentTime;
+              window.ytMinimizedPreviewPos = fallbackSession.anchorPreviewSeconds;
               window.ytMinimizedTime = hiddenAtMs;
-              console.log(`[useBackgroundPlayback] Background fallback: using already in-sync audio.currentTime = ${audio.currentTime}s`);
+              console.log(`[useBackgroundPlayback] Background fallback: using loaded audio.currentTime = ${fallbackSession.anchorPreviewSeconds}s`);
             } else {
               loadedMetadataListenerRef.current = applySeek;
               audio.addEventListener("loadedmetadata", applySeek, { once: true });
 
               // Optimistic values in case we return before loadedmetadata fires.
-              const loopDur = 30;
-              const startPos = (currentPos / 1000) % loopDur;
+              const durationSeconds = (fallbackSession.durationMs || 0) / 1000;
+              const startPos = clampAudioSeconds(currentPos / 1000, durationSeconds);
               fallbackSession.anchorPreviewSeconds = startPos;
-              fallbackSession.loopDurationSeconds = loopDur;
+              fallbackSession.loopDurationSeconds = durationSeconds;
               setChromeBackgroundHandoff(fallbackSession);
 
               window.ytBackgroundFallbackTriggered = true;
@@ -208,16 +260,18 @@ export function useBackgroundPlayback() {
               window.ytMinimizedTime = hiddenAtMs;
             }
           } else {
-            fallbackSession.anchorPreviewSeconds = (currentPos / 1000) % 30;
+            const durationSeconds = (fallbackSession.durationMs || 0) / 1000;
+            fallbackSession.anchorPreviewSeconds = clampAudioSeconds(currentPos / 1000, durationSeconds);
+            fallbackSession.loopDurationSeconds = durationSeconds;
             setChromeBackgroundHandoff(fallbackSession);
 
             window.ytBackgroundFallbackTriggered = true;
             window.ytMinimizedYouTubePos = currentPos;
-            window.ytMinimizedPreviewPos = (currentPos / 1000) % 30;
+            window.ytMinimizedPreviewPos = fallbackSession.anchorPreviewSeconds;
             window.ytMinimizedTime = hiddenAtMs;
           }
 
-          // Trigger state sync to play the direct audio fallback preview at user volume
+          // Trigger state sync to play the direct full audio fallback at user volume.
           syncAudioStateSync(state.currentTrack, "youtube", state.isPlaying, state.volume);
         }
       } else if (document.visibilityState === "visible") {
@@ -237,12 +291,24 @@ export function useBackgroundPlayback() {
           let currentPos = state.positionMs;
           if (fallbackSession) {
             const dur = audio?.duration;
-            const loopDur = (dur && !isNaN(dur)) ? dur : 30;
-            currentPos = estimateChromeResumePositionMs(fallbackSession, {
-              currentPreviewSeconds: audio?.currentTime,
-              loopDurationSeconds: loopDur,
+            const directSeconds = Number(audio?.currentTime);
+            const wallClockPos = estimateChromeResumePositionMs(fallbackSession, {
               leadMs: CHROME_RESUME_SEEK_LEAD_MS
             });
+
+            if (fallbackSession.sourceType === "jamendo" && Number.isFinite(directSeconds)) {
+              currentPos = clampPlaybackPositionMs(
+                Math.max(wallClockPos, (directSeconds * 1000) + CHROME_RESUME_SEEK_LEAD_MS),
+                fallbackSession.durationMs
+              );
+            } else {
+              const loopDur = (dur && !isNaN(dur)) ? dur : 30;
+              currentPos = estimateChromeResumePositionMs(fallbackSession, {
+                currentPreviewSeconds: audio?.currentTime,
+                loopDurationSeconds: loopDur,
+                leadMs: CHROME_RESUME_SEEK_LEAD_MS
+              });
+            }
             fallbackSession.returnTargetMs = currentPos;
             fallbackSession.returnStartedAtMs = Date.now();
             setChromeBackgroundHandoff(fallbackSession);
@@ -289,33 +355,37 @@ export function useBackgroundPlayback() {
   }, []);
 
   // ── 3. Foreground sync loop ───────────────────────────────────
-  // Keeps the silent preview audio element in sync with the YouTube player
-  // while the page is visible, so that when the app is minimized, the audio
-  // is already at the correct position and does not need to seek in the background.
+  // Keeps a loaded full background source aligned when it is already active.
+  // Chrome preview URLs are intentionally excluded; 30-second clips must never
+  // masquerade as background playback.
   useEffect(() => {
     if (document.visibilityState !== "visible") return;
     if (!isPlaying || sourceType !== "youtube" || !currentTrack) return;
     if (!shouldUseChromeAndroidBackgroundFallback(useSettingsStore.getState())) return;
-    if (!(currentTrack.previewUrl || currentTrack.jamendoUrl)) return;
+    if (!hasChromeBackgroundAudioSource(currentTrack)) return;
 
     const audio = getDirectAudioElement();
     if (!audio) return;
+    const backgroundSourceType = getChromeBackgroundAudioSourceType(currentTrack);
+    const targetSrc = getDirectAudioSourceSync(currentTrack, backgroundSourceType);
+    if (!audioSourceMatches(audio, targetSrc)) return;
 
     const interval = setInterval(() => {
       if (document.visibilityState !== "visible") return;
+      if (!audioSourceMatches(audio, targetSrc)) return;
 
-      const dur = audio.duration;
-      const loopDur = (dur && !isNaN(dur)) ? dur : 30;
-      const expectedPreviewPos = (usePlayerStore.getState().positionMs / 1000) % loopDur;
+      const durationSeconds = getFiniteAudioDurationSeconds(audio, currentTrack.durationMs);
+      const expectedAudioPos = clampAudioSeconds(
+        usePlayerStore.getState().positionMs / 1000,
+        durationSeconds
+      );
 
       if (audio.readyState < 1) return;
 
-      const drift = Math.abs(audio.currentTime - expectedPreviewPos);
-      // This preview is nearly silent while visible, so keep it tightly aligned
-      // before Chrome hides the tab. That avoids risky background seeks later.
+      const drift = Math.abs(audio.currentTime - expectedAudioPos);
       if (drift > 0.35) {
-        console.log(`[useBackgroundPlayback] Drift detected: ${drift.toFixed(2)}s. Syncing preview currentTime to ${expectedPreviewPos.toFixed(2)}s`);
-        audio.currentTime = expectedPreviewPos;
+        console.log(`[useBackgroundPlayback] Drift detected: ${drift.toFixed(2)}s. Syncing background audio currentTime to ${expectedAudioPos.toFixed(2)}s`);
+        audio.currentTime = expectedAudioPos;
       }
     }, 500);
 

@@ -67,10 +67,53 @@ describe("playback controller", () => {
 
     expect(resolvePlaybackEngine(track, "youtube", { mobileBackgroundFallback: true }, {
       userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
+    })).toBe(PLAYBACK_ENGINES.YOUTUBE_IFRAME);
+
+    expect(resolvePlaybackEngine({ ...track, jamendoUrl: "/full-track.mp3" }, "youtube", { mobileBackgroundFallback: true }, {
+      userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
     })).toBe(PLAYBACK_ENGINES.CHROME_FALLBACK);
 
     expect(resolvePlaybackEngine({ ...track, previewUrl: "/preview.mp3" }, "preview", {}))
       .toBe(PLAYBACK_ENGINES.DIRECT_AUDIO);
+  });
+
+  it("does not use a 30-second preview as Chrome background playback while hidden", async () => {
+    const originalUserAgent = navigator.userAgent;
+    const originalVisibilityState = document.visibilityState;
+    Object.defineProperty(navigator, "userAgent", {
+      value: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
+      writable: true,
+      configurable: true
+    });
+    Object.defineProperty(document, "visibilityState", {
+      value: "hidden",
+      writable: true,
+      configurable: true
+    });
+    useSettingsStore.setState({ mobileBackgroundFallback: true });
+
+    try {
+      const { controller, getState } = createTestController();
+      await controller.playTrack({ ...track, previewUrl: "/preview.mp3" }, "youtube");
+
+      expect(getState()).toMatchObject({
+        sourceType: "youtube",
+        activeEngine: PLAYBACK_ENGINES.YOUTUBE_IFRAME,
+        isPlaying: false
+      });
+      expect(getState().playbackFailure.message).toContain("30s preview");
+    } finally {
+      Object.defineProperty(navigator, "userAgent", {
+        value: originalUserAgent,
+        writable: true,
+        configurable: true
+      });
+      Object.defineProperty(document, "visibilityState", {
+        value: originalVisibilityState,
+        writable: true,
+        configurable: true
+      });
+    }
   });
 
   it("routes play, pause, seek, and volume through one command layer", async () => {
