@@ -1,5 +1,6 @@
-import { Clock, Heart, Play, Shuffle, Sparkles, ArrowLeft, Loader2, Plus } from "lucide-react";
+import { Clock, Heart, Play, Shuffle, Sparkles, ArrowLeft, Loader2, Plus, ListMusic } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
 import { useLibraryStore } from "../store/libraryStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
@@ -7,7 +8,8 @@ import { apiPost } from "../services/api.js";
 import { useToast } from "../components/common/ToastProvider.jsx";
 
 export default function Library() {
-  const { likedTracks, hydrate, savePlaylist } = useLibraryStore();
+  const { likedTracks, playlists, hydrate, savePlaylist } = useLibraryStore();
+  const navigate = useNavigate();
   const playTrack = usePlayerStore((state) => state.playTrack);
   const setQueue = usePlayerStore((state) => state.setQueue);
   const currentTrack = usePlayerStore((state) => state.currentTrack);
@@ -17,6 +19,7 @@ export default function Library() {
   const [smartTracks, setSmartTracks] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [smartTitle, setSmartTitle] = useState("Smart Mix");
+  const [activeView, setActiveView] = useState("library");
 
   useEffect(() => {
     hydrate().catch(() => {});
@@ -89,8 +92,89 @@ export default function Library() {
     }
   }
 
+  async function createPlaylist() {
+    const id = `playlist-${Date.now()}`;
+    const name = `My Playlist #${playlists.length + 1}`;
+    try {
+      await savePlaylist({
+        id,
+        name,
+        tracks: [],
+        createdAt: Date.now()
+      });
+      showToast?.(`Created ${name}`);
+      navigate(`/playlists/${id}`);
+    } catch (err) {
+      showToast?.("Failed to create playlist.");
+    }
+  }
+
   const totalMs = likedTracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
   const totalMinutes = Math.round(totalMs / 60000);
+
+  if (activeView === "library" && smartTracks.length === 0) {
+    return (
+      <div className="page-stack library-page">
+        <header className="library-landing-header">
+          <div>
+            <span className="liked-label">Collection</span>
+            <h1>Your Library</h1>
+          </div>
+          <button type="button" className="primary-action library-create-button" onClick={createPlaylist}>
+            <Plus size={18} />
+            <span>Create</span>
+          </button>
+        </header>
+
+        <section className="library-collection-list" aria-label="Library collections">
+          <button type="button" className="library-collection-card" onClick={() => setActiveView("liked")}>
+            <div className="library-card-art library-card-art--liked">
+              <Heart size={28} fill="white" />
+            </div>
+            <div className="library-card-copy">
+              <strong>Liked Songs</strong>
+              <span>Playlist • {likedTracks.length} song{likedTracks.length !== 1 ? "s" : ""}</span>
+            </div>
+          </button>
+
+          {playlists.map((playlist) => {
+            const artworks = (playlist.tracks || []).slice(0, 4).map((track) => track.artworkUrl).filter(Boolean);
+            return (
+              <Link key={playlist.id} className="library-collection-card" to={`/playlists/${playlist.id}`}>
+                <div className="library-card-art">
+                  {artworks.length >= 4 ? (
+                    <div className="library-card-mosaic">
+                      {artworks.slice(0, 4).map((url, index) => (
+                        <img key={`${url}-${index}`} src={url} alt="" />
+                      ))}
+                    </div>
+                  ) : artworks.length > 0 ? (
+                    <img src={artworks[0]} alt="" />
+                  ) : (
+                    <ListMusic size={26} />
+                  )}
+                </div>
+                <div className="library-card-copy">
+                  <strong>{playlist.name}</strong>
+                  <span>Playlist • {playlist.tracks?.length || 0} song{(playlist.tracks?.length || 0) !== 1 ? "s" : ""}</span>
+                </div>
+              </Link>
+            );
+          })}
+
+          <button type="button" className="library-collection-card library-collection-card--create" onClick={createPlaylist}>
+            <div className="library-card-art library-card-art--create">
+              <Plus size={28} />
+            </div>
+            <div className="library-card-copy">
+              <strong>Create playlist</strong>
+              <span>Start an empty playlist</span>
+            </div>
+          </button>
+        </section>
+      </div>
+    );
+  }
 
   if (smartTracks.length > 0) {
     const totalSmartMs = smartTracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
@@ -181,6 +265,9 @@ export default function Library() {
   return (
     <div className="page-stack">
       <header className="liked-header">
+        <button type="button" className="icon-button back-to-library" onClick={() => setActiveView("library")} aria-label="Back to library">
+          <ArrowLeft size={22} />
+        </button>
         <div className="liked-gradient-icon liked-gradient-icon--large">
           <Heart size={64} fill="white" />
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Heart, ListMusic, ListPlus, Play, MoreHorizontal, User, Disc3, Download, Trash2 } from "lucide-react";
+import { Heart, ListMusic, ListPlus, Play, MoreHorizontal, User, Disc3, Download, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLibraryStore } from "../../store/libraryStore.js";
 import { usePlayerStore } from "../../store/playerStore.js";
@@ -17,6 +17,7 @@ export function TrackMenu({ track }) {
   const isLiked = useLibraryStore((state) => state.isLiked(track.id));
   const toggleLike = useLibraryStore((state) => state.toggleLike);
   const addToPlaylist = useLibraryStore((state) => state.addToPlaylist);
+  const savePlaylist = useLibraryStore((state) => state.savePlaylist);
   const isDownloaded = useLibraryStore((state) => state.isDownloaded(track.id));
   const downloadTrack = useLibraryStore((state) => state.downloadTrack);
   const removeDownload = useLibraryStore((state) => state.removeDownload);
@@ -60,6 +61,21 @@ export function TrackMenu({ track }) {
     showToast?.(`Added to ${playlist.name}`);
     setOpen(false);
     setShowPlaylists(false);
+  }
+
+  async function handleCreatePlaylist() {
+    const id = `playlist-${Date.now()}`;
+    const name = `My Playlist #${playlists.length + 1}`;
+    await savePlaylist({
+      id,
+      name,
+      tracks: [track],
+      createdAt: Date.now()
+    });
+    showToast?.(`Created ${name}`);
+    setOpen(false);
+    setShowPlaylists(false);
+    navigate(`/playlists/${id}`);
   }
 
   function handleGoToArtist() {
@@ -136,6 +152,10 @@ export function TrackMenu({ track }) {
 
           {showPlaylists && (
             <div className="track-menu-sub">
+              <button type="button" className="track-menu-item" onClick={handleCreatePlaylist}>
+                <Plus size={16} />
+                <span>Create playlist</span>
+              </button>
               {playlists.length ? playlists.map((pl) => (
                 <button
                   key={pl.id}
