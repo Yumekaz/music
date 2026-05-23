@@ -1,4 +1,4 @@
-import { Clock, ListMusic, Pause, Play, Share2, Shuffle, Trash2 } from "lucide-react";
+import { AlertTriangle, Clock, ListMusic, Play, Share2, Shuffle, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ImageWithFallback } from "../components/common/ImageWithFallback.jsx";
@@ -21,6 +21,7 @@ export default function Playlist() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
   const [sharedPlaylist, setSharedPlaylist] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     hydrate().catch(() => {});
@@ -100,10 +101,14 @@ export default function Playlist() {
   }
 
   function handleDelete() {
-    if (deletePlaylist) {
-      deletePlaylist(playlist.id);
-      navigate("/library");
-    }
+    setDeleteConfirmOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!deletePlaylist) return;
+    await deletePlaylist(playlist.id);
+    showToast?.("Playlist deleted");
+    navigate("/library");
   }
 
   function handleShare() {
@@ -229,6 +234,36 @@ export default function Playlist() {
           </button>
         )}
       </div>
+
+      {deleteConfirmOpen && (
+        <div className="confirm-overlay" role="presentation">
+          <section
+            className="confirm-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-playlist-title"
+            aria-describedby="delete-playlist-copy"
+          >
+            <div className="confirm-icon" aria-hidden="true">
+              <AlertTriangle size={22} />
+            </div>
+            <div className="confirm-copy">
+              <h2 id="delete-playlist-title">Delete {playlist.name}?</h2>
+              <p id="delete-playlist-copy">
+                This removes the playlist from your library. Your liked songs stay safe.
+              </p>
+            </div>
+            <div className="confirm-actions">
+              <button type="button" className="utility-button" onClick={() => setDeleteConfirmOpen(false)}>
+                Keep playlist
+              </button>
+              <button type="button" className="danger-action" onClick={confirmDelete}>
+                Delete playlist
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {tracks.length > 0 ? (
         <div className="numbered-track-list">

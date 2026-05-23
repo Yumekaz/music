@@ -569,6 +569,75 @@ button:disabled {
   gap: 6px;
 }
 
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(10px);
+}
+
+.confirm-dialog {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid #2c342c;
+  border-radius: 8px;
+  background: #101510;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.confirm-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 82, 82, 0.12);
+  color: #ff7777;
+}
+
+.confirm-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.confirm-copy h2 {
+  margin: 0;
+  color: #f5f7f2;
+  font-size: 1.25rem;
+}
+
+.confirm-copy p {
+  margin: 0;
+  color: #9aa39a;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.danger-action {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 82, 82, 0.3);
+  border-radius: 999px;
+  background: #ff5252;
+  color: #080b0a;
+  font-weight: 800;
+}
+
 /* ─── Numbered Track List ─── */
 .numbered-track-list {
   display: flex;
