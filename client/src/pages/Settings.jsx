@@ -104,26 +104,71 @@ export default function Settings() {
   const crossfadeLabel =
     crossfadeDuration === 0 ? "Off" : `${crossfadeDuration}s`;
 
+  const pageClass = "mx-auto grid w-full max-w-[1040px] gap-[28px] pb-[32px] text-ink";
+  const headerClass = "flex items-center justify-between";
+  const sectionClass = "grid gap-[12px]";
+  const sectionTitleClass = "inline-flex items-center gap-[9px] text-[0.78rem] font-bold uppercase tracking-[0.08em] text-muted";
+  const cardClass = "grid gap-[20px] rounded-[10px] border border-line bg-[rgba(16,21,16,0.72)] p-[18px] shadow-[0_18px_46px_rgba(0,0,0,0.22)] md:p-[22px]";
+  const rowClass = "grid gap-[16px] md:grid-cols-[minmax(0,1fr)_minmax(240px,340px)] md:items-center";
+  const compactRowClass = "flex items-center justify-between gap-[16px]";
+  const labelClass = "grid min-w-0 gap-[4px]";
+  const labelTitleClass = "m-0 text-[1rem] font-bold text-ink";
+  const labelHelpClass = "m-0 text-[0.88rem] leading-[1.5] text-muted";
+  const noteClass = "m-0 text-[0.88rem] leading-[1.55] text-muted";
+  const primaryActionClass = "inline-flex min-h-[38px] items-center justify-center gap-[8px] rounded-full border-0 bg-ink px-[16px] text-[0.9rem] font-bold text-night transition-transform hover:scale-[1.03] active:scale-[0.96]";
+  const outlineActionClass = "inline-flex min-h-[36px] items-center justify-center gap-[8px] rounded-full border border-line bg-night px-[14px] text-[0.85rem] font-bold text-ink transition-colors hover:border-accent hover:text-accent active:scale-[0.96]";
+  const sliderClass = "h-[5px] w-full cursor-pointer appearance-none rounded-full accent-accent outline-none";
+  const sliderTicksClass = "flex justify-between text-[0.72rem] font-semibold text-muted";
+  const toggleClass = (on) =>
+    `relative h-[30px] w-[54px] shrink-0 rounded-full border transition-colors ${
+      on ? "border-accent bg-accent" : "border-line bg-[rgba(255,255,255,0.08)]"
+    }`;
+  const toggleThumbClass = (on) =>
+    `absolute top-1/2 h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-ink shadow-[0_4px_12px_rgba(0,0,0,0.35)] transition-transform ${
+      on ? "translate-x-[27px]" : "translate-x-[4px]"
+    }`;
+  const disclosureClass = `grid w-full grid-cols-[1fr_auto] items-center gap-[12px] rounded-[10px] border border-line bg-[rgba(16,21,16,0.72)] p-[16px] text-left transition-colors hover:border-accent/60 ${
+    diagnosticsOpen ? "border-accent/60" : ""
+  }`;
+  const diagnosticsGridClass = "grid gap-[10px] sm:grid-cols-2 lg:grid-cols-3";
+  const diagnosticsTileClass = "grid min-w-0 gap-[4px] rounded-[8px] border border-line bg-night/60 p-[12px]";
+  const diagnosticsLabelClass = "text-[0.72rem] font-bold uppercase tracking-[0.08em] text-muted";
+  const diagnosticsValueClass = "truncate text-[0.9rem] font-bold text-ink";
+  const diagnosticsBlockClass = "grid gap-[10px] rounded-[8px] border border-line bg-night/40 p-[12px]";
+  const diagnosticsRowClass = "grid grid-cols-[minmax(0,1fr)_auto] gap-[12px] border-t border-line/70 py-[8px] first:border-t-0 first:pt-0 last:pb-0";
+  const qualityGridClass = "grid gap-[10px] sm:grid-cols-2 lg:grid-cols-3";
+  const qualityTileClass = (active) =>
+    `relative grid gap-[4px] rounded-[8px] border p-[13px] text-left transition-colors ${
+      active ? "border-accent bg-[rgba(30,215,96,0.1)] text-ink" : "border-line bg-night/60 text-ink hover:border-accent/60"
+    }`;
+  const presetChipClass = (active) =>
+    `min-h-[34px] rounded-full border px-[13px] text-[0.82rem] font-bold transition-colors ${
+      active ? "border-accent bg-accent text-night" : "border-line bg-night text-ink hover:border-accent hover:text-accent"
+    }`;
+  const eqBandsClass = "grid grid-cols-4 gap-[14px] pt-[4px] sm:grid-cols-8";
+  const eqBandSliderClass = "h-[132px] w-[32px] cursor-pointer accent-accent disabled:cursor-not-allowed disabled:opacity-40 [direction:rtl] [writing-mode:vertical-lr]";
+  const creditClass = "flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-line bg-[rgba(16,21,16,0.72)] p-[16px] text-muted";
+
   return (
-    <div className="settings-page">
-      <header className="settings-header">
-        <h1>Settings</h1>
+    <div className={pageClass}>
+      <header className={headerClass}>
+        <h1 className="m-0 text-[clamp(1.8rem,4vw,3rem)] font-bold">Settings</h1>
       </header>
 
       {canInstall && (
-        <section className="settings-section">
-          <div className="settings-section-title">
+        <section className={sectionClass}>
+          <div className={sectionTitleClass}>
             <Download size={18} aria-hidden="true" />
             <span>App</span>
           </div>
 
-          <div className="settings-card">
-            <div className="settings-row settings-row--compact">
-              <div className="settings-row-label">
-                <p>Install Reverb</p>
-                <span>Add Reverb to your device so it opens like an app.</span>
+          <div className={cardClass}>
+            <div className={compactRowClass}>
+              <div className={labelClass}>
+                <p className={labelTitleClass}>Install Reverb</p>
+                <span className={labelHelpClass}>Add Reverb to your device so it opens like an app.</span>
               </div>
-              <button type="button" className="primary-action" onClick={install}>
+              <button type="button" className={primaryActionClass} onClick={install}>
                 <Download size={18} aria-hidden="true" />
                 <span>Install</span>
               </button>
@@ -132,24 +177,23 @@ export default function Settings() {
         </section>
       )}
 
-      {/* ── Playback ── */}
-      <section className="settings-section">
-        <div className="settings-section-title">
+      <section className={sectionClass}>
+        <div className={sectionTitleClass}>
           <Music2 size={18} aria-hidden="true" />
           <span>Playback</span>
         </div>
 
-        <div className="settings-card">
-          <div className="settings-row">
-            <div className="settings-row-label">
-              <p>Crossfade</p>
-              <span>
+        <div className={cardClass}>
+          <div className={rowClass}>
+            <div className={labelClass}>
+              <p className={labelTitleClass}>Crossfade</p>
+              <span className={labelHelpClass}>
                 Smooth transition between tracks for iTunes and Jamendo previews.
                 Set to 0 to disable.
               </span>
             </div>
-            <div className="settings-row-control crossfade-control">
-              <span className="crossfade-value">{crossfadeLabel}</span>
+            <div className="grid gap-[10px]">
+              <span className="text-right text-[0.86rem] font-bold text-accent">{crossfadeLabel}</span>
               <input
                 type="range"
                 min="0"
@@ -158,10 +202,10 @@ export default function Settings() {
                 value={crossfadeDuration}
                 onChange={(e) => setCrossfadeDuration(Number(e.target.value))}
                 aria-label="Crossfade duration in seconds"
-                className="settings-slider"
-                style={{ "--progress": `${(crossfadeDuration / 12) * 100}%` }}
+                className={sliderClass}
+                style={{ background: `linear-gradient(to right, #1ed760 ${(crossfadeDuration / 12) * 100}%, #242c24 ${(crossfadeDuration / 12) * 100}%)` }}
               />
-              <div className="crossfade-ticks">
+              <div className={sliderTicksClass}>
                 <span>Off</span>
                 <span>6s</span>
                 <span>12s</span>
@@ -169,10 +213,10 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="settings-row settings-row--compact" style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid var(--border-color)" }}>
-            <div className="settings-row-label">
-              <p>Mobile Background Playback</p>
-              <span>
+          <div className={`${compactRowClass} border-t border-line pt-[20px]`}>
+            <div className={labelClass}>
+              <p className={labelTitleClass}>Mobile Background Playback</p>
+              <span className={labelHelpClass}>
                 Uses audio previews only on Chrome Android when the browser is minimized.
               </span>
             </div>
@@ -180,139 +224,137 @@ export default function Settings() {
               type="button"
               role="switch"
               aria-checked={mobileBackgroundFallback}
-              className={`toggle-switch ${mobileBackgroundFallback ? "on" : ""}`}
+              className={toggleClass(mobileBackgroundFallback)}
               onClick={() => setMobileBackgroundFallback(!mobileBackgroundFallback)}
             >
-              <span className="toggle-thumb" />
+              <span className={toggleThumbClass(mobileBackgroundFallback)} />
             </button>
           </div>
         </div>
       </section>
 
-      {/* Diagnostics */}
-      <section className="settings-section">
+      <section className={sectionClass}>
         <button
           type="button"
-          className={`settings-disclosure-toggle ${diagnosticsOpen ? "open" : ""}`}
+          className={disclosureClass}
           aria-expanded={diagnosticsOpen}
           aria-controls="settings-diagnostics-panel"
           onClick={() => setDiagnosticsOpen((open) => !open)}
         >
-          <span className="settings-section-title">
-            <Bug size={18} aria-hidden="true" />
-            <span>Advanced</span>
+          <span className="grid gap-[3px]">
+            <span className={sectionTitleClass}>
+              <Bug size={18} aria-hidden="true" />
+              <span>Advanced</span>
+            </span>
+            <strong className="text-[1rem] text-ink">Playback Diagnostics</strong>
+            <span className="text-[0.82rem] text-muted">Troubleshooting details</span>
           </span>
-          <span className="settings-disclosure-copy">
-            <strong>Playback Diagnostics</strong>
-            <span>Troubleshooting details</span>
-          </span>
-          <ChevronDown size={18} aria-hidden="true" />
+          <ChevronDown className={`transition-transform ${diagnosticsOpen ? "rotate-180" : ""}`} size={18} aria-hidden="true" />
         </button>
 
         {diagnosticsOpen && (
-          <div id="settings-diagnostics-panel" className="settings-card diagnostics-card">
-            <div className="diagnostics-grid">
-              <div>
-                <span>Browser</span>
-                <strong>{browserCapabilities.isOfficialChromeAndroid ? "Chrome Android" : browserCapabilities.isMobileBrowser ? "Mobile browser" : "Desktop browser"}</strong>
+          <div id="settings-diagnostics-panel" className={cardClass}>
+            <div className={diagnosticsGridClass}>
+              <div className={diagnosticsTileClass}>
+                <span className={diagnosticsLabelClass}>Browser</span>
+                <strong className={diagnosticsValueClass}>{browserCapabilities.isOfficialChromeAndroid ? "Chrome Android" : browserCapabilities.isMobileBrowser ? "Mobile browser" : "Desktop browser"}</strong>
               </div>
-              <div>
-                <span>Background</span>
-                <strong>{getBackgroundStrategyLabel(browserCapabilities.backgroundStrategy)}</strong>
+              <div className={diagnosticsTileClass}>
+                <span className={diagnosticsLabelClass}>Background</span>
+                <strong className={diagnosticsValueClass}>{getBackgroundStrategyLabel(browserCapabilities.backgroundStrategy)}</strong>
               </div>
-              <div>
-                <span>Engine</span>
-                <strong>{getPlaybackEngineLabel(activeEngine)}</strong>
+              <div className={diagnosticsTileClass}>
+                <span className={diagnosticsLabelClass}>Engine</span>
+                <strong className={diagnosticsValueClass}>{getPlaybackEngineLabel(activeEngine)}</strong>
               </div>
-              <div>
-                <span>Source</span>
-                <strong>{sourceType}</strong>
+              <div className={diagnosticsTileClass}>
+                <span className={diagnosticsLabelClass}>Source</span>
+                <strong className={diagnosticsValueClass}>{sourceType}</strong>
               </div>
-              <div>
-                <span>Media Session</span>
-                <strong>{browserCapabilities.supportsMediaSession ? "Supported" : "Unavailable"}</strong>
+              <div className={diagnosticsTileClass}>
+                <span className={diagnosticsLabelClass}>Media Session</span>
+                <strong className={diagnosticsValueClass}>{browserCapabilities.supportsMediaSession ? "Supported" : "Unavailable"}</strong>
               </div>
-              <div>
-                <span>Wake Lock</span>
-                <strong>{browserCapabilities.supportsWakeLock ? "Supported" : "Unavailable"}</strong>
+              <div className={diagnosticsTileClass}>
+                <span className={diagnosticsLabelClass}>Wake Lock</span>
+                <strong className={diagnosticsValueClass}>{browserCapabilities.supportsWakeLock ? "Supported" : "Unavailable"}</strong>
               </div>
-              <div>
-                <span>Current Track</span>
-                <strong>{currentTrack?.title || "None"}</strong>
+              <div className={diagnosticsTileClass}>
+                <span className={diagnosticsLabelClass}>Current Track</span>
+                <strong className={diagnosticsValueClass}>{currentTrack?.title || "None"}</strong>
               </div>
-              <div>
-                <span>Chrome Handoff</span>
-                <strong>{chromeHandoff ? "Active" : "Idle"}</strong>
+              <div className={diagnosticsTileClass}>
+                <span className={diagnosticsLabelClass}>Chrome Handoff</span>
+                <strong className={diagnosticsValueClass}>{chromeHandoff ? "Active" : "Idle"}</strong>
               </div>
             </div>
 
-            <div className="diagnostics-block">
-              <div className="diagnostics-block-title">
+            <div className={diagnosticsBlockClass}>
+              <div className={sectionTitleClass}>
                 <Activity size={15} aria-hidden="true" />
                 <span>Queue Readiness</span>
               </div>
               {readinessEntries.length ? (
-                <div className="diagnostics-list">
+                <div>
                   {readinessEntries.map(([trackId, readiness]) => (
-                    <div key={trackId} className="diagnostics-row">
-                      <span>{trackId}</span>
-                      <strong>{getReadinessLabel(readiness.status)}</strong>
+                    <div key={trackId} className={diagnosticsRowClass}>
+                      <span className="truncate text-muted">{trackId}</span>
+                      <strong className="text-ink">{getReadinessLabel(readiness.status)}</strong>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="settings-card-note">No queue checks yet.</p>
+                <p className={noteClass}>No queue checks yet.</p>
               )}
             </div>
 
-            <div className="diagnostics-block">
-              <div className="diagnostics-block-title">
+            <div className={diagnosticsBlockClass}>
+              <div className={sectionTitleClass}>
                 <Server size={15} aria-hidden="true" />
                 <span>Provider Health</span>
               </div>
               {providerError ? (
-                <p className="settings-card-note">{providerError}</p>
+                <p className={noteClass}>{providerError}</p>
               ) : providerStatus?.providers ? (
-                <div className="diagnostics-list">
+                <div>
                   {Object.entries(providerStatus.providers).map(([name, provider]) => (
-                    <div key={name} className="diagnostics-row">
-                      <span>{name}</span>
-                      <strong>{provider.status} / {provider.mode}</strong>
+                    <div key={name} className={diagnosticsRowClass}>
+                      <span className="truncate text-muted">{name}</span>
+                      <strong className="text-ink">{provider.status} / {provider.mode}</strong>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="settings-card-note">Checking providers...</p>
+                <p className={noteClass}>Checking providers...</p>
               )}
             </div>
           </div>
         )}
       </section>
 
-      {/* ── Video Quality ── */}
-      <section className="settings-section">
-        <div className="settings-section-title">
+      <section className={sectionClass}>
+        <div className={sectionTitleClass}>
           <Tv2 size={18} aria-hidden="true" />
           <span>Video Quality</span>
         </div>
 
-        <div className="settings-card">
-          <p className="settings-card-note">
+        <div className={cardClass}>
+          <p className={noteClass}>
             Applies to YouTube playback. YouTube may override this based on
             connection speed and video availability.
           </p>
-          <div className="quality-grid">
+          <div className={qualityGridClass}>
             {QUALITY_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
-                className={`quality-tile ${playbackQuality === opt.value ? "active" : ""}`}
+                className={qualityTileClass(playbackQuality === opt.value)}
                 onClick={() => setPlaybackQuality(opt.value)}
               >
-                <span className="quality-tile-label">{opt.label}</span>
-                <span className="quality-tile-desc">{opt.desc}</span>
+                <span className="text-[0.95rem] font-bold">{opt.label}</span>
+                <span className="text-[0.8rem] leading-[1.35] text-muted">{opt.desc}</span>
                 {playbackQuality === opt.value && (
-                  <span className="quality-tile-check" aria-hidden="true">✓</span>
+                  <span className="absolute right-[12px] top-[10px] text-accent" aria-hidden="true">✓</span>
                 )}
               </button>
             ))}
@@ -320,44 +362,41 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* ── Equalizer ── */}
-      <section className="settings-section">
-        <div className="settings-section-title">
+      <section className={sectionClass}>
+        <div className={sectionTitleClass}>
           <SlidersHorizontal size={18} aria-hidden="true" />
           <span>Equalizer</span>
         </div>
 
-        <div className="settings-card">
-          <p className="settings-card-note">
+        <div className={cardClass}>
+          <p className={noteClass}>
             Only applies to iTunes 30s previews and Jamendo tracks — not YouTube.
             Enable EQ, then pick a preset or drag the bands.
           </p>
 
-          {/* Enable toggle */}
-          <div className="settings-row settings-row--compact">
-            <div className="settings-row-label">
-              <p>Enable Equalizer</p>
+          <div className={compactRowClass}>
+            <div className={labelClass}>
+              <p className={labelTitleClass}>Enable Equalizer</p>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={equalizerEnabled}
-              className={`toggle-switch ${equalizerEnabled ? "on" : ""}`}
+              className={toggleClass(equalizerEnabled)}
               onClick={() => setEqualizerEnabled(!equalizerEnabled)}
             >
-              <span className="toggle-thumb" />
+              <span className={toggleThumbClass(equalizerEnabled)} />
             </button>
           </div>
 
           {equalizerEnabled && (
             <>
-              {/* Presets */}
-              <div className="eq-preset-row">
+              <div className="flex flex-wrap gap-[8px]">
                 {Object.keys(EQUALIZER_PRESETS).filter((p) => p !== "Custom").map((name) => (
                   <button
                     key={name}
                     type="button"
-                    className={`eq-preset-chip ${equalizerPreset === name ? "active" : ""}`}
+                    className={presetChipClass(equalizerPreset === name)}
                     onClick={() => setEqualizerPreset(name, EQUALIZER_PRESETS[name])}
                   >
                     {name}
@@ -365,7 +404,7 @@ export default function Settings() {
                 ))}
                 <button
                   type="button"
-                  className="eq-preset-chip eq-reset"
+                  className={outlineActionClass}
                   onClick={resetEQ}
                   title="Reset to Normal"
                 >
@@ -373,14 +412,12 @@ export default function Settings() {
                 </button>
               </div>
 
-              {/* Band sliders */}
-              <div className="eq-bands-full">
+              <div className={eqBandsClass}>
                 {BANDS.map((band, index) => {
                   const gain = equalizerGains[index] ?? 0;
-                  const pct = ((gain + 12) / 24) * 100;
                   return (
-                    <div key={band.frequency} className="eq-band-col">
-                      <span className="eq-band-gain">
+                    <div key={band.frequency} className="grid min-w-0 justify-items-center gap-[8px]">
+                      <span className="text-[0.72rem] font-bold text-muted">
                         {gain > 0 ? `+${gain}` : gain}
                       </span>
                       <input
@@ -392,18 +429,17 @@ export default function Settings() {
                         disabled={!directEnabled}
                         onChange={(e) => setBandGain(index, Number(e.target.value))}
                         aria-label={`${band.label} Hz gain`}
-                        className="eq-band-slider"
-                        style={{ "--progress": `${pct}%` }}
+                        className={eqBandSliderClass}
                         orient="vertical"
                       />
-                      <span className="eq-band-label">{band.label}</span>
+                      <span className="text-[0.76rem] font-bold text-muted">{band.label}</span>
                     </div>
                   );
                 })}
               </div>
 
               {!directEnabled && (
-                <p className="settings-card-note" style={{ marginTop: "12px" }}>
+                <p className={noteClass}>
                   Play an iTunes or Jamendo preview to activate EQ.
                 </p>
               )}
@@ -412,14 +448,15 @@ export default function Settings() {
         </div>
       </section>
 
-      <section className="settings-section settings-credit-section" aria-label="App credits">
-        <div className="settings-credit-card">
-          <span>Built by Mihir</span>
+      <section className={sectionClass} aria-label="App credits">
+        <div className={creditClass}>
+          <span className="font-semibold">Built by Mihir</span>
           <a
             href="https://github.com/Yumekaz/music"
             target="_blank"
             rel="noreferrer"
             aria-label="Open Mihir's GitHub repository"
+            className={outlineActionClass}
           >
             <Github size={16} aria-hidden="true" />
             <span>GitHub repo</span>

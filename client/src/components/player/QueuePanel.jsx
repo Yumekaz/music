@@ -28,10 +28,29 @@ function ReadinessBadge({ readiness }) {
   const status = readiness?.status || "unknown";
   const label = getReadinessLabel(status);
 
+  let statusClass = "text-muted border-[#2c352c] bg-[rgba(255,255,255,0.04)]";
+  if (status === QUEUE_READINESS.READY) {
+    statusClass = "text-accent border-[rgba(30,215,96,0.35)] bg-[rgba(30,215,96,0.08)]";
+  } else if (status === QUEUE_READINESS.FOREGROUND_ONLY) {
+    statusClass = "text-[#f0c56a] border-[rgba(240,197,106,0.35)] bg-[rgba(240,197,106,0.08)]";
+  } else if (
+    [
+      QUEUE_READINESS.MISSING_VIDEO,
+      QUEUE_READINESS.MISSING_PREVIEW,
+      QUEUE_READINESS.PROVIDER_TIMEOUT,
+      QUEUE_READINESS.OFFLINE,
+      QUEUE_READINESS.UNAVAILABLE,
+    ].includes(status)
+  ) {
+    statusClass = "text-[#ff8a8a] border-[rgba(255,138,138,0.35)] bg-[rgba(255,138,138,0.08)]";
+  }
+
+  const badgeClass = `inline-flex items-center gap-[4px] min-w-max max-w-[118px] px-[7px] py-[3px] border rounded-full text-[0.68rem] font-bold whitespace-nowrap ${statusClass}`;
+
   return (
-    <span className={`queue-readiness queue-readiness--${status}`} title={readiness?.reason || label}>
+    <span className={badgeClass} title={readiness?.reason || label}>
       {readinessIcon(status)}
-      <span>{label}</span>
+      <span className="overflow-hidden text-ellipsis">{label}</span>
     </span>
   );
 }
@@ -86,23 +105,43 @@ export function QueuePanel({ open, onClose }) {
     setDragOverIndex(null);
   };
 
+  const panelClass = "fixed right-0 bottom-[80px] w-full max-w-[380px] max-h-[calc(100vh-120px)] bg-[#141914] border border-line rounded-t-[12px] overflow-y-auto z-[500] shadow-[-4px_0_24px_rgba(0,0,0,0.5)] animate-slide-up";
+  const headerClass = "flex items-center justify-between px-[20px] pt-[16px] pb-[8px] sticky top-0 bg-[#141914] z-[1]";
+  const sectionClass = "px-[20px] pt-[8px] pb-[16px]";
+  const sectionLabelClass = "block text-[0.72rem] font-bold uppercase tracking-[0.08em] text-muted mb-[8px]";
+
+  const getItemClass = (isDragging, isDragOver, isActive) => {
+    let base = "flex items-center gap-[12px] py-[6px] rounded-[6px] cursor-grab transition-all duration-150 group active:cursor-grabbing";
+    if (isDragging) base += " opacity-30 scale-95 bg-[rgba(255,255,255,0.05)]";
+    if (isDragOver) base += " border-t-2 border-[#1db954] rounded-none";
+    if (isActive) base += " text-accent";
+    return base;
+  };
+
+  const artClass = "w-[40px] h-[40px] rounded-[4px] object-cover shrink-0";
+  const infoClass = "flex-1 min-w-0 grid gap-[2px]";
+  const titleClass = "text-[0.85rem] font-medium overflow-hidden whitespace-nowrap text-ellipsis";
+  const artistClass = "text-[0.75rem] text-muted";
+
+  const smallIconBtnClass = "w-[32px] h-[32px] inline-flex items-center justify-center rounded-full border-0 bg-transparent text-muted cursor-pointer transition-colors hover:text-ink hover:bg-[rgba(255,255,255,0.07)] md:hidden group-hover:inline-flex";
+
   return (
-    <div className="queue-panel">
-      <header className="queue-header">
-        <h3>Queue</h3>
-        <button type="button" className="icon-button icon-button--small" onClick={onClose} aria-label="Close queue">
+    <div className={panelClass}>
+      <header className={headerClass}>
+        <h3 className="m-0 text-[1rem] font-bold">Queue</h3>
+        <button type="button" className={smallIconBtnClass} onClick={onClose} aria-label="Close queue">
           <X size={18} />
         </button>
       </header>
 
       {currentTrack && (
-        <div className="queue-section">
-          <span className="queue-label">Now Playing</span>
-          <div className="queue-item active">
-            <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className="queue-art" />
-            <div className="queue-info">
-              <span className="queue-title">{currentTrack.title}</span>
-              <span className="queue-artist">{currentTrack.artistName}</span>
+        <div className={sectionClass}>
+          <span className={sectionLabelClass}>Now Playing</span>
+          <div className={getItemClass(false, false, true)}>
+            <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className={artClass} />
+            <div className={infoClass}>
+              <span className={titleClass}>{currentTrack.title}</span>
+              <span className={artistClass}>{currentTrack.artistName}</span>
             </div>
             <ReadinessBadge readiness={queueReadiness[currentTrack.id]} />
             <PlayingBars isPlaying={isPlaying} isBuffering={isBuffering} />
@@ -110,28 +149,28 @@ export function QueuePanel({ open, onClose }) {
         </div>
       )}
 
-      <div className="queue-section animate-slide-in">
-        <span className="queue-label">Next Up</span>
+      <div className={`${sectionClass} animate-slide-up`}>
+        <span className={sectionLabelClass}>Next Up</span>
         {upNext.length > 0 ? (
           upNext.map((track, i) => (
             <div
               key={`${track.id}-${i}`}
-              className={`queue-item ${draggedIndex === i ? "dragging" : ""} ${dragOverIndex === i ? "drag-over" : ""}`}
+              className={getItemClass(draggedIndex === i, dragOverIndex === i, false)}
               draggable
               onDragStart={(e) => handleDragStart(e, i)}
               onDragOver={(e) => handleDragOver(e, i)}
               onDragEnd={handleDragEnd}
               onDrop={(e) => handleDrop(e, i)}
             >
-              <ImageWithFallback src={track.artworkUrl} alt={track.title} className="queue-art" />
-              <div className="queue-info">
-                <span className="queue-title">{track.title}</span>
-                <span className="queue-artist">{track.artistName}</span>
+              <ImageWithFallback src={track.artworkUrl} alt={track.title} className={artClass} />
+              <div className={infoClass}>
+                <span className={titleClass}>{track.title}</span>
+                <span className={artistClass}>{track.artistName}</span>
               </div>
               <ReadinessBadge readiness={queueReadiness[track.id]} />
               <button
                 type="button"
-                className="icon-button icon-button--small queue-play"
+                className={smallIconBtnClass}
                 onClick={() => playTrack(track, "youtube")}
                 aria-label={`Play ${track.title}`}
               >
@@ -139,7 +178,7 @@ export function QueuePanel({ open, onClose }) {
               </button>
               <button
                 type="button"
-                className="icon-button icon-button--small queue-remove"
+                className={smallIconBtnClass}
                 onClick={() => removeFromQueue(track.id)}
                 aria-label="Remove from queue"
               >
@@ -148,7 +187,7 @@ export function QueuePanel({ open, onClose }) {
             </div>
           ))
         ) : (
-          <p className="queue-empty">Queue is empty. Songs will appear here as you play.</p>
+          <p className="text-muted text-[0.82rem] py-[8px]">Queue is empty. Songs will appear here as you play.</p>
         )}
       </div>
     </div>

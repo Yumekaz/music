@@ -38,40 +38,40 @@ export function SidebarLibrary() {
   );
 
   return (
-    <div className="sidebar-library">
-      <header className="lib-header">
-        <button type="button" className="lib-header-title" onClick={() => setFilter("all")}>
+    <div className="flex-1 flex flex-col min-h-0 px-[8px] pb-[8px]">
+      <header className="flex items-center justify-between pt-[12px] px-[8px] pb-[8px]">
+        <button type="button" className="inline-flex items-center gap-[8px] border-0 p-0 bg-transparent text-muted font-bold text-[0.92rem] cursor-pointer transition-colors duration-[160ms] hover:text-ink" onClick={() => setFilter("all")}>
           <ListMusic size={18} aria-hidden="true" />
           <span>Your Library</span>
         </button>
-        <div className="lib-header-actions">
-          <button type="button" className="lib-icon-btn" onClick={createPlaylist} aria-label="Create playlist">
+        <div className="flex gap-[4px]">
+          <button type="button" className="w-[32px] h-[32px] inline-grid place-items-center border-0 rounded-full text-muted bg-transparent cursor-pointer transition-colors duration-[160ms] hover:text-ink hover:bg-[rgba(255,255,255,0.07)]" onClick={createPlaylist} aria-label="Create playlist">
             <Plus size={18} />
           </button>
         </div>
       </header>
 
-      <div className="lib-filters">
+      <div className="flex gap-[8px] pt-[4px] px-[8px] pb-[8px]">
         <button
           type="button"
-          className={`lib-chip ${filter === "playlists" ? "active" : ""}`}
+          className={`min-h-[28px] px-[12px] border-0 rounded-full text-[0.78rem] font-semibold cursor-pointer transition-colors duration-[160ms] ${filter === "playlists" ? "bg-ink text-night" : "text-ink bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.14)]"}`}
           onClick={() => setFilter(filter === "playlists" ? "all" : "playlists")}
         >
           Playlists
         </button>
         <button
           type="button"
-          className={`lib-chip ${filter === "liked" ? "active" : ""}`}
+          className={`min-h-[28px] px-[12px] border-0 rounded-full text-[0.78rem] font-semibold cursor-pointer transition-colors duration-[160ms] ${filter === "liked" ? "bg-ink text-night" : "text-ink bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.14)]"}`}
           onClick={() => setFilter(filter === "liked" ? "all" : "liked")}
         >
           Liked
         </button>
       </div>
 
-      <div className="lib-search-row">
+      <div className="flex items-center gap-[6px] pt-[2px] px-[8px] pb-[6px]">
         <button
           type="button"
-          className="lib-icon-btn lib-search-toggle"
+          className="w-[32px] h-[32px] inline-grid place-items-center border-0 rounded-full text-muted bg-transparent cursor-pointer transition-colors duration-[160ms] hover:text-ink hover:bg-[rgba(255,255,255,0.07)]"
           onClick={() => setSearch(search ? "" : " ")}
           aria-label="Search in library"
         >
@@ -79,7 +79,7 @@ export function SidebarLibrary() {
         </button>
         {search !== "" && (
           <input
-            className="lib-search-input"
+            className="flex-1 min-w-0 h-[28px] px-[8px] border-0 rounded-[4px] bg-[rgba(255,255,255,0.08)] text-ink text-[0.8rem] outline-none"
             type="text"
             placeholder="Search in Your Library"
             value={search.trim()}
@@ -87,19 +87,19 @@ export function SidebarLibrary() {
             autoFocus
           />
         )}
-        <span className="lib-sort">Recents</span>
+        <span className="ml-auto text-muted text-[0.78rem] whitespace-nowrap">Recents</span>
       </div>
 
-      <div className="lib-items">
+      <div className="flex-1 overflow-y-auto flex flex-col gap-[2px] lib-items">
         {showLiked && (
-          <NavLink to="/library" className={({ isActive }) => `lib-item ${isActive ? "active" : ""}`}>
-            <div className="lib-liked-icon">
+          <NavLink to="/library" className={({ isActive }) => `flex items-center gap-[10px] p-[8px] rounded-[6px] transition-colors duration-[160ms] cursor-pointer hover:bg-[rgba(255,255,255,0.07)] ${isActive ? "bg-[rgba(255,255,255,0.07)]" : ""}`}>
+            <div className="w-[48px] h-[48px] min-w-[48px] grid place-items-center rounded-[4px] bg-gradient-to-br from-[#450af5] to-[#c4efd9]">
               <Heart size={16} fill="white" />
             </div>
-            <div className="lib-item-info">
-              <span className="lib-item-title">Liked Songs</span>
-              <span className="lib-item-meta">
-                <span className="lib-pin">📌</span> Playlist • {likedTracks.length} song{likedTracks.length !== 1 ? "s" : ""}
+            <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
+              <span className="font-semibold text-[0.9rem] truncate">Liked Songs</span>
+              <span className="text-muted text-[0.78rem] truncate">
+                <span className="text-[0.7rem]">📌</span> Playlist • {likedTracks.length} song{likedTracks.length !== 1 ? "s" : ""}
               </span>
             </div>
             {isPlayingLiked && (
@@ -116,28 +116,28 @@ export function SidebarLibrary() {
             <NavLink
               key={playlist.id}
               to={`/playlists/${playlist.id}`}
-              className={({ isActive }) => `lib-item ${isActive ? "active" : ""}`}
+              className={({ isActive }) => `flex items-center gap-[10px] p-[8px] rounded-[6px] transition-colors duration-[160ms] cursor-pointer hover:bg-[rgba(255,255,255,0.07)] ${isActive ? "bg-[rgba(255,255,255,0.07)]" : ""}`}
             >
-              <div className="lib-playlist-art">
+              <div className="w-[48px] h-[48px] min-w-[48px] rounded-[4px] overflow-hidden bg-[#181e18]">
                 {artworks.length >= 4 ? (
-                  <div className="lib-mosaic">
+                  <div className="grid grid-cols-2 w-full h-full">
                     {artworks.slice(0, 4).map((url, i) => (
-                      <img key={i} src={url} alt="" />
+                      <img key={i} src={url} alt="" className="w-full h-full object-cover" />
                     ))}
                   </div>
                 ) : artworks.length > 0 ? (
-                  <img src={artworks[0]} alt="" className="lib-single-art" />
+                  <img src={artworks[0]} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="lib-empty-art">
+                  <div className="w-[48px] h-[48px] min-w-[48px] grid place-items-center rounded-[4px] bg-[#181e18] text-muted">
                     <ListMusic size={20} />
                   </div>
                 )}
               </div>
-              <div className="lib-item-info">
-                <span className={`lib-item-title ${isPlayingHere ? "playing" : ""}`}>
+              <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
+                <span className={`font-semibold text-[0.9rem] truncate ${isPlayingHere ? "text-accent" : ""}`}>
                   {playlist.name}
                 </span>
-                <span className="lib-item-meta">
+                <span className="text-muted text-[0.78rem] truncate">
                   Playlist • {playlist.tracks?.length || 0} song{(playlist.tracks?.length || 0) !== 1 ? "s" : ""}
                 </span>
               </div>
@@ -149,10 +149,10 @@ export function SidebarLibrary() {
         })}
 
         {!hydrated && (
-          <div className="lib-item">
-            <div className="lib-empty-art"><ListMusic size={20} /></div>
-            <div className="lib-item-info">
-              <span className="lib-item-title">Loading...</span>
+          <div className="flex items-center gap-[10px] p-[8px] rounded-[6px] transition-colors duration-[160ms]">
+            <div className="w-[48px] h-[48px] min-w-[48px] grid place-items-center rounded-[4px] bg-[#181e18] text-muted"><ListMusic size={20} /></div>
+            <div className="flex-1 min-w-0 flex flex-col gap-[2px]">
+              <span className="font-semibold text-[0.9rem] truncate">Loading...</span>
             </div>
           </div>
         )}
