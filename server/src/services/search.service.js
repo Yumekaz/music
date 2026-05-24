@@ -26,7 +26,6 @@ export async function searchCatalog(query, limit = 8) {
     const relatedAlbumIds = new Set(fixtureTracks.map((track) => track.albumId));
 
     const mergedItunesIds = new Set();
-    const mergedJamendoIds = new Set();
 
     // Map and merge YouTube results
     const ytTracks = youtubeResults.map((result) => {
@@ -51,33 +50,17 @@ export async function searchCatalog(query, limit = 8) {
         matchedArtwork = itunesMatch.artworkUrl;
       }
 
-      // Find matching Jamendo result
-      let matchedJamendoUrl = "";
-      const jamendoMatch = jamendoResults.find((jamTrack, idx) => {
-        if (mergedJamendoIds.has(idx)) return false;
-        if (matchesTitleAndArtist(jamTrack.title, jamTrack.artistName, result.title, result.artistName)) {
-          mergedJamendoIds.add(idx);
-          return true;
-        }
-        return false;
-      });
-
-      if (jamendoMatch) {
-        matchedJamendoUrl = jamendoMatch.jamendoUrl || jamendoMatch.previewUrl || "";
-      }
-
       return normalizeTrack(fixture || result, {
         ...result,
         id: fixture?.id || result.id,
         lyricsAvailable: fixture?.lyricsAvailable || false,
         previewUrl: fixture?.previewUrl || matchedPreviewUrl || "",
-        jamendoUrl: fixture?.jamendoUrl || matchedJamendoUrl || "",
+        jamendoUrl: fixture?.jamendoUrl || "",
         durationMs: fixture?.durationMs || result.durationMs || matchedDuration || 0,
         artworkUrl: fixture?.artworkUrl || result.artworkUrl || matchedArtwork || "",
         availableProviders: fixture?.availableProviders || [
           "youtube",
-          ...(matchedPreviewUrl ? ["itunes"] : []),
-          ...(matchedJamendoUrl ? ["jamendo"] : [])
+          ...(matchedPreviewUrl ? ["itunes"] : [])
         ],
         externalLinks: fixture?.externalLinks || {
           youtube: result.videoId ? `https://www.youtube.com/watch?v=${result.videoId}` : ""
@@ -103,9 +86,9 @@ export async function searchCatalog(query, limit = 8) {
         });
       });
 
-    // Format remaining Jamendo tracks that weren't merged
+    // Keep Jamendo as separate direct-audio results. Do not merge it into
+    // YouTube tracks; loose matches can play the wrong song.
     const remainingJamendoTracks = jamendoResults
-      .filter((_, idx) => !mergedJamendoIds.has(idx))
       .map((item) => {
         return normalizeTrack({
           id: `jamendo-${item.jamendoId}`,

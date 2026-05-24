@@ -25,7 +25,7 @@ describe("queue preflight", () => {
     expect(readiness.reason).toContain("30s preview");
   });
 
-  it("allows Chrome YouTube tracks with a full Jamendo fallback", () => {
+  it("does not treat Jamendo as a Chrome YouTube background fallback", () => {
     const readiness = classifyTrackReadiness(
       { id: "one", title: "Song", videoId: "abc", previewUrl: "/preview.mp3", jamendoUrl: "/full-track.mp3" },
       {
@@ -35,7 +35,8 @@ describe("queue preflight", () => {
       }
     );
 
-    expect(readiness.status).toBe(QUEUE_READINESS.READY);
+    expect(readiness.status).toBe(QUEUE_READINESS.FOREGROUND_ONLY);
+    expect(readiness.reason).toContain("Jamendo");
   });
 
   it("does not punish non-Chrome browser paths for missing preview", () => {

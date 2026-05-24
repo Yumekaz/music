@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveTrack } from "../services/tracks.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { QUEUE_READINESS } from "./queuePreflight.js";
 import {
@@ -58,6 +59,7 @@ function createTestController(initial = {}) {
 
 describe("playback controller", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     useSettingsStore.setState({ mobileBackgroundFallback: false });
   });
 
@@ -71,7 +73,7 @@ describe("playback controller", () => {
 
     expect(resolvePlaybackEngine({ ...track, jamendoUrl: "/full-track.mp3" }, "youtube", { mobileBackgroundFallback: true }, {
       userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
-    })).toBe(PLAYBACK_ENGINES.CHROME_FALLBACK);
+    })).toBe(PLAYBACK_ENGINES.YOUTUBE_IFRAME);
 
     expect(resolvePlaybackEngine({ ...track, previewUrl: "/preview.mp3" }, "preview", {}))
       .toBe(PLAYBACK_ENGINES.DIRECT_AUDIO);
@@ -102,6 +104,7 @@ describe("playback controller", () => {
         isPlaying: false
       });
       expect(getState().playbackFailure.message).toContain("30s preview");
+      expect(resolveTrack).not.toHaveBeenCalled();
     } finally {
       Object.defineProperty(navigator, "userAgent", {
         value: originalUserAgent,

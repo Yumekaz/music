@@ -21,7 +21,7 @@ export function TrackRow({ track, compact = false }) {
   const artistSlug = (track.artistName || "").toLowerCase().replace(/\s+/g, "-");
 
   return (
-    <article className={`track-row spotify-track-row ${compact ? "compact" : ""}`}>
+    <article className={`track-row ${compact ? "compact" : ""}`}>
       <ImageWithFallback src={track.artworkUrl} alt={track.title} className="track-art" />
       <div className="track-main">
         <div className="track-title-row">

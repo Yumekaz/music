@@ -1,5 +1,4 @@
 import { getRecommendations } from "../services/search.js";
-import { resolveTrack } from "../services/tracks.js";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { getDirectAudioElement, syncAudioStateSync } from "./directAudio.js";
 import { shouldUseChromeAndroidBackgroundFallback } from "./browserCapabilities.js";
@@ -125,42 +124,11 @@ export function createPlaybackController({ get, set }) {
     const settings = useSettingsStore.getState();
     const chromeBackgroundFallback = shouldUseChromeAndroidBackgroundFallback(settings);
 
-    if (!track || !chromeBackgroundFallback || sourceType !== "youtube" || hasChromeBackgroundAudioSource(track)) {
-      return track;
+    if (track && chromeBackgroundFallback && sourceType === "youtube") {
+      syncAudioStateSync(track, "youtube", true, volume);
     }
 
-    set({
-      currentTrack: track,
-      sourceType: "youtube",
-      isPlaying: true,
-      isBuffering: true,
-      positionMs: 0,
-      durationMs: track?.durationMs || 0,
-      activeEngine: PLAYBACK_ENGINES.YOUTUBE_IFRAME
-    });
-
-    syncAudioStateSync(track, "youtube", true, volume);
-
-    const title = track.title || "";
-    if (!title) return track;
-
-    return resolveTrack(title, getTrackArtist(track))
-      .then((resolved) => {
-        if (!resolved?.jamendoUrl) return track;
-        return {
-          ...track,
-          jamendoUrl: resolved.jamendoUrl
-        };
-      })
-      .catch(() => {
-        set({
-          playbackFailure: playbackFailure("Provider timed out", {
-            trackId: track?.id,
-            status: "provider-timeout"
-          })
-        });
-        return track;
-      });
+    return track;
   }
 
   async function playTrack(track, sourceType = "youtube") {

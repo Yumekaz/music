@@ -6,11 +6,13 @@ import { TrackRow } from "../components/track/TrackRow.jsx";
 import { LoadingSkeleton } from "../components/common/LoadingSkeleton.jsx";
 import { getCharts, getRecommendations } from "../services/search.js";
 import { useLibraryStore } from "../store/libraryStore.js";
+import { usePlayerStore } from "../store/playerStore.js";
 
 export default function Home() {
   const hydrate = useLibraryStore((state) => state.hydrate);
   const history = useLibraryStore((state) => state.history);
   const likedTracks = useLibraryStore((state) => state.likedTracks);
+  const playTrack = usePlayerStore((state) => state.playTrack);
 
   useEffect(() => {
     hydrate().catch(() => {});
@@ -64,12 +66,18 @@ export default function Home() {
       )}
 
       {showQuickGrid && (
-        <section className="spotify-quick-grid">
+        <section className="spotify-quick-grid" aria-label="Recently played">
           {history.slice(0, 8).map((track) => (
-            <div key={`quick-${track.id}`} className="spotify-quick-card">
+            <button
+              key={`quick-${track.id}`}
+              type="button"
+              className="spotify-quick-card"
+              onClick={() => playTrack(track, "youtube")}
+              aria-label={`Play ${track.title}`}
+            >
               <img src={track.artworkUrl} alt={track.title} />
               <span>{track.title}</span>
-            </div>
+            </button>
           ))}
         </section>
       )}

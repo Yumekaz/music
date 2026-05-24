@@ -38,7 +38,7 @@ export function AppShell() {
           <Outlet />
         </main>
         <Player online={online} />
-        <nav className="mobile-nav spotify-mobile-nav" aria-label="Mobile navigation">
+        <nav className="mobile-nav" aria-label="Mobile navigation">
           <NavLink to="/" end className={({ isActive }) => isActive ? "active" : ""}>
             {({ isActive }) => (
               <>

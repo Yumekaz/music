@@ -4,7 +4,6 @@ import { normalizeTrack } from "../utils/normalize.js";
 import { rankCandidates } from "../utils/ranking.js";
 import { getPreviewForTrack } from "./providers/itunes.provider.js";
 import { searchJioSaavn } from "./providers/jiosaavn.provider.js";
-import { searchJamendo } from "./providers/jamendo.provider.js";
 import { searchMusicBrainzRecording } from "./providers/musicbrainz.provider.js";
 import { getProviderLinks } from "./providers/odesli.provider.js";
 import { searchYouTube } from "./providers/youtube.provider.js";
@@ -33,12 +32,11 @@ export async function resolveTrack({ title, artist }) {
       };
     }
 
-    const [youtubeResult, mbResult, previewResult, jiosaavnResult, jamendoResults] = await Promise.all([
+    const [youtubeResult, mbResult, previewResult, jiosaavnResult] = await Promise.all([
       searchYouTube(`${title} ${artist}`, 5),
       searchMusicBrainzRecording(title, artist),
       getPreviewForTrack(title, artist),
-      searchJioSaavn(`${title} ${artist}`),
-      searchJamendo(`${title} ${artist}`, 3)
+      searchJioSaavn(`${title} ${artist}`)
     ]);
 
     const candidates = [
@@ -70,13 +68,6 @@ export async function resolveTrack({ title, artist }) {
           ...fallback.externalLinks,
           ...jiosaavnResult.externalLinks
         }
-      },
-      jamendoResults?.[0] && {
-        ...fallback,
-        jamendoId: jamendoResults[0].jamendoId,
-        previewUrl: jamendoResults[0].previewUrl || fallback.previewUrl,
-        jamendoUrl: jamendoResults[0].jamendoUrl || jamendoResults[0].previewUrl || fallback.jamendoUrl,
-        availableProviders: [...new Set([...fallback.availableProviders, "jamendo"])]
       }
     ].filter(Boolean);
 
@@ -98,11 +89,6 @@ export async function resolveTrack({ title, artist }) {
       }
       if (previewResult && !best.albumName) {
         best.albumName = previewResult.albumName;
-      }
-      if (jamendoResults?.[0]) {
-        if (!best.jamendoId) best.jamendoId = jamendoResults[0].jamendoId;
-        if (!best.previewUrl) best.previewUrl = jamendoResults[0].previewUrl;
-        if (!best.jamendoUrl) best.jamendoUrl = jamendoResults[0].jamendoUrl || jamendoResults[0].previewUrl;
       }
       if (jiosaavnResult) {
         if (!best.artworkUrl) best.artworkUrl = jiosaavnResult.artworkUrl;

@@ -11,10 +11,13 @@ export function TrackCard({ track }) {
   }
 
   return (
-    <article className="track-card spotify-track-card">
+    <article className="track-card">
       <div className="track-card-media">
         <button type="button" className="track-card-art-link" onClick={() => startPlayback("youtube")}>
           <ImageWithFallback src={track.artworkUrl} alt={track.title} className="track-card-art" />
+        </button>
+        <button type="button" className="play-button small" onClick={() => startPlayback("youtube")} aria-label={`Play ${track.title}`}>
+          <Play size={17} aria-hidden="true" />
         </button>
       </div>
       <div className="track-card-copy">
