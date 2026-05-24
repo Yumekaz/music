@@ -250,11 +250,13 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
     if (standbyVideoId === videoId) {
       // Pre-buffered! Swap them.
-      if (typeof currentActive.stopVideo === 'function') currentActive.stopVideo();
-      
       const newActiveId = currentActiveId === 'A' ? 'B' : 'A';
       activePlayerRef.current = newActiveId;
       setActivePlayerId(newActiveId);
+
+      // Mark the standby player active before stopping the old iframe so any
+      // pause/stop event from the old video cannot flip the app back to paused.
+      if (typeof currentActive.stopVideo === 'function') currentActive.stopVideo();
 
       if (isPlaying && typeof currentStandby.playVideo === 'function') {
         currentStandby.playVideo();
@@ -294,16 +296,23 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
   // 4. Handle Play/Pause
   useEffect(() => {
-    if (activePlayer && typeof activePlayer.playVideo === "function") {
+    const currentActive = activePlayerRef.current === 'A' ? playerA : playerB;
+    const activeVideoId = activePlayerRef.current === 'A'
+      ? playerAVideoIdRef.current
+      : playerBVideoIdRef.current;
+
+    if (!currentActive || activeVideoId !== videoId) return;
+
+    if (typeof currentActive.playVideo === "function") {
       if (isPlaying && videoId) {
         pendingPauseRef.current = false;
-        activePlayer.playVideo();
+        currentActive.playVideo();
       } else {
         pendingPauseRef.current = true;
-        activePlayer.pauseVideo();
+        currentActive.pauseVideo();
       }
     }
-  }, [activePlayer, isPlaying, videoId]);
+  }, [activePlayerId, playerA, playerB, isPlaying, videoId]);
 
   // 5. Handle Seek
   useEffect(() => {
