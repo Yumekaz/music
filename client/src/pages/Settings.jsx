@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, Bug, ChevronDown, Github, RotateCcw, Music2, Server, SlidersHorizontal, Tv2 } from "lucide-react";
+import { Activity, Bug, ChevronDown, Download, Github, RotateCcw, Music2, Server, SlidersHorizontal, Tv2 } from "lucide-react";
 import { useSettingsStore } from "../store/settingsStore.js";
 import { usePlayerStore } from "../store/playerStore.js";
 import { useEqualizer } from "../hooks/useEqualizer.js";
+import { usePWAInstall } from "../hooks/usePWAInstall.js";
 import { EQUALIZER_PRESETS } from "../components/equalizer/EqualizerPresets.js";
 import { isDirectAudioSource } from "../lib/resolvers.js";
 import { getBrowserCapabilities, getBackgroundStrategyLabel } from "../lib/browserCapabilities.js";
@@ -37,6 +38,7 @@ export default function Settings() {
   const [providerError, setProviderError] = useState("");
   const [chromeHandoff, setChromeHandoff] = useState(null);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const { canInstall, install } = usePWAInstall();
 
   const {
     crossfadeDuration,   setCrossfadeDuration,
@@ -107,6 +109,28 @@ export default function Settings() {
       <header className="settings-header">
         <h1>Settings</h1>
       </header>
+
+      {canInstall && (
+        <section className="settings-section">
+          <div className="settings-section-title">
+            <Download size={18} aria-hidden="true" />
+            <span>App</span>
+          </div>
+
+          <div className="settings-card">
+            <div className="settings-row settings-row--compact">
+              <div className="settings-row-label">
+                <p>Install Reverb</p>
+                <span>Add Reverb to your device so it opens like an app.</span>
+              </div>
+              <button type="button" className="primary-action" onClick={install}>
+                <Download size={18} aria-hidden="true" />
+                <span>Install</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Playback ── */}
       <section className="settings-section">

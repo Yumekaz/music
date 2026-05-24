@@ -23,7 +23,7 @@ export function createApp({ corsOrigin } = {}) {
   app.get("/api/health", (_request, response) => {
     response.json({
       ok: true,
-      name: "music-app-v3-api",
+      name: "reverb-api",
       providerStatus: getProviderStatusSnapshot()
     });
   });

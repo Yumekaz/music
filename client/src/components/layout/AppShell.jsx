@@ -8,6 +8,7 @@ import { ShortcutsHelpModal } from "../common/ShortcutsHelpModal.jsx";
 import { useOnlineStatus } from "../../hooks/useOnlineStatus.js";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts.js";
 import { useBackgroundPlayback } from "../../hooks/useBackgroundPlayback.js";
+import { usePWAInstall } from "../../hooks/usePWAInstall.js";
 import { usePlayerStore } from "../../store/playerStore.js";
 
 export function AppShell() {
@@ -19,6 +20,7 @@ export function AppShell() {
 
   useKeyboardShortcuts();
   useBackgroundPlayback();
+  usePWAInstall();
 
   return (
     <ToastProvider>
@@ -36,22 +38,38 @@ export function AppShell() {
           <Outlet />
         </main>
         <Player online={online} />
-        <nav className="mobile-nav" aria-label="Mobile navigation">
+        <nav className="mobile-nav spotify-mobile-nav" aria-label="Mobile navigation">
           <NavLink to="/" end className={({ isActive }) => isActive ? "active" : ""}>
-            <Home size={20} />
-            <span>Home</span>
+            {({ isActive }) => (
+              <>
+                <Home size={24} strokeWidth={2.5} fill={isActive ? "currentColor" : "none"} />
+                <span>Home</span>
+              </>
+            )}
           </NavLink>
           <NavLink to="/search" className={({ isActive }) => isActive ? "active" : ""}>
-            <Search size={20} />
-            <span>Search</span>
+            {({ isActive }) => (
+              <>
+                <Search size={24} strokeWidth={2.5} fill={isActive ? "currentColor" : "none"} />
+                <span>Search</span>
+              </>
+            )}
           </NavLink>
           <NavLink to="/library" className={({ isActive }) => isActive ? "active" : ""}>
-            <Library size={20} />
-            <span>Library</span>
+            {({ isActive }) => (
+              <>
+                <Library size={24} strokeWidth={2.5} fill={isActive ? "currentColor" : "none"} />
+                <span>Your Library</span>
+              </>
+            )}
           </NavLink>
           <NavLink to="/settings" className={({ isActive }) => isActive ? "active" : ""}>
-            <Settings size={20} />
-            <span>Settings</span>
+            {({ isActive }) => (
+              <>
+                <Settings size={24} strokeWidth={2.5} fill={isActive ? "currentColor" : "none"} />
+                <span>Settings</span>
+              </>
+            )}
           </NavLink>
         </nav>
         <ShortcutsHelpModal />

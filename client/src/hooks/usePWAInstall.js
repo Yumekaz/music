@@ -1,22 +1,46 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+let deferredPrompt = null;
+let listening = false;
+const listeners = new Set();
+
+function notifyListeners() {
+  listeners.forEach((listener) => listener(deferredPrompt));
+}
+
+function ensureInstallPromptListener() {
+  if (listening || typeof window === "undefined") return;
+  listening = true;
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    notifyListeners();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    notifyListeners();
+  });
+}
 
 export function usePWAInstall() {
-  const [prompt, setPrompt] = useState(null);
+  const [prompt, setPrompt] = useState(deferredPrompt);
 
   useEffect(() => {
-    const onBeforeInstallPrompt = (event) => {
-      event.preventDefault();
-      setPrompt(event);
-    };
-    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    ensureInstallPromptListener();
+    listeners.add(setPrompt);
+    setPrompt(deferredPrompt);
+    return () => listeners.delete(setPrompt);
   }, []);
 
-  async function install() {
-    if (!prompt) return;
-    await prompt.prompt();
-    setPrompt(null);
-  }
+  const install = useCallback(async () => {
+    if (!deferredPrompt) return;
+    const promptToShow = deferredPrompt;
+    await promptToShow.prompt();
+    deferredPrompt = null;
+    notifyListeners();
+  }, []);
 
   return { canInstall: Boolean(prompt), install };
 }

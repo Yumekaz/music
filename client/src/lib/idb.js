@@ -1,5 +1,6 @@
 import { openDB } from "idb";
 
+// Keep the legacy IndexedDB name so existing liked songs and playlists stay attached.
 const DB_NAME = "music-app-v3";
 const DB_VERSION = 2;
 

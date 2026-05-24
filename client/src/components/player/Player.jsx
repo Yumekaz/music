@@ -111,32 +111,36 @@ export function Player({ online }) {
 
   return (
     <>
-      <footer 
-        className="player-bar" 
+      <footer
+        className="player-bar spotify-mini-player"
         aria-label="Persistent player"
         onClick={handleBarClick}
       >
-        <div className="player-media" onClick={() => currentTrack && navigate("/now-playing")} role="button" tabIndex={0}>
-          {currentTrack && sourceType === "youtube" ? (
-            <YouTubeEmbed 
-              track={currentTrack} 
-              nextVideoId={getNextTrack()?.videoId}
-              isPlaying={online && isPlaying} 
-              className="mini-youtube" 
-            />
-          ) : currentTrack ? (
-            <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className="mini-artwork" />
-          ) : (
-            <div className="mini-empty">
-              <Disc3 size={28} aria-hidden="true" />
-            </div>
-          )}
-        </div>
-        <div className="player-meta">
-          <div className="player-meta-row">
+        <div className="spotify-mini-main">
+          <div className="player-media" onClick={() => currentTrack && navigate("/now-playing")} role="button" tabIndex={0}>
+            {currentTrack && sourceType === "youtube" ? (
+              <YouTubeEmbed
+                track={currentTrack}
+                nextVideoId={getNextTrack()?.videoId}
+                isPlaying={online && isPlaying}
+                className="mini-youtube"
+              />
+            ) : currentTrack ? (
+              <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className="mini-artwork" />
+            ) : (
+              <div className="mini-empty">
+                <Disc3 size={28} aria-hidden="true" />
+              </div>
+            )}
+          </div>
+          <div className="player-meta spotify-meta">
             <button type="button" className="player-title" onClick={() => currentTrack && navigate("/now-playing")}>
               {currentTrack?.title || "Choose a track"}
             </button>
+            <span className="player-artist">{currentTrack?.artistName || "Search or play from Home"}</span>
+            {statusMessage ? <strong className="player-status">{statusMessage}</strong> : null}
+          </div>
+          <div className="spotify-controls-right">
             <button
               type="button"
               className={`icon-button icon-button--small player-heart ${isLiked ? "liked" : ""}`}
@@ -146,39 +150,41 @@ export function Player({ online }) {
               }}
               aria-label={isLiked ? "Unlike" : "Like"}
             >
-              <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
+              <Heart size={20} fill={isLiked ? "currentColor" : "none"} />
+            </button>
+            <PlayerControls
+              disabled={disabled}
+              isPlaying={online && isPlaying}
+              onToggle={handleToggle}
+              onNext={next}
+              onPrevious={previous}
+              minimal={true}
+            />
+          </div>
+
+          {/* Desktop only tools */}
+          <div className="player-tools desktop-only">
+            <VolumeControl volume={volume} onVolume={setVolume} />
+            <button
+              type="button"
+              className={`icon-button icon-button--small ${queueOpen ? "active" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setQueueOpen(!queueOpen);
+              }}
+              aria-label="Toggle queue"
+            >
+              <ListMusic size={18} />
             </button>
           </div>
-          <span>{currentTrack?.artistName || "Search or play from Home"}</span>
-          {statusMessage ? <strong>{statusMessage}</strong> : null}
         </div>
-        <div className="player-workspace">
-          <PlayerControls
-            disabled={disabled}
-            isPlaying={online && isPlaying}
-            onToggle={handleToggle}
-            onNext={next}
-            onPrevious={previous}
-          />
+
+        <div className="spotify-progress-bottom">
           <ProgressBar
             positionMs={positionMs}
             durationMs={durationMs || currentTrack?.durationMs || 0}
             onSeek={seek}
           />
-        </div>
-        <div className="player-tools">
-          <VolumeControl volume={volume} onVolume={setVolume} />
-          <button
-            type="button"
-            className={`icon-button icon-button--small ${queueOpen ? "active" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setQueueOpen(!queueOpen);
-            }}
-            aria-label="Toggle queue"
-          >
-            <ListMusic size={18} />
-          </button>
         </div>
       </footer>
       <QueuePanel open={queueOpen} onClose={() => setQueueOpen(false)} />

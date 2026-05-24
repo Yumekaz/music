@@ -1,15 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Download, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useMemo, useEffect } from "react";
 import { TrackCard } from "../components/track/TrackCard.jsx";
 import { TrackRow } from "../components/track/TrackRow.jsx";
 import { LoadingSkeleton } from "../components/common/LoadingSkeleton.jsx";
-import { usePWAInstall } from "../hooks/usePWAInstall.js";
 import { getCharts, getRecommendations } from "../services/search.js";
 import { useLibraryStore } from "../store/libraryStore.js";
 
 export default function Home() {
-  const { canInstall, install } = usePWAInstall();
   const hydrate = useLibraryStore((state) => state.hydrate);
   const history = useLibraryStore((state) => state.history);
   const likedTracks = useLibraryStore((state) => state.likedTracks);
@@ -44,33 +42,37 @@ export default function Home() {
   });
 
   const charts = useQuery({ queryKey: ["charts"], queryFn: getCharts });
+  const showQuickGrid = history.length >= 2;
 
   return (
     <div className="page-stack">
-      <section className="home-hero">
-        <div className="home-copy">
-          <p>Reverb</p>
-          <h1>
-            {hasSeeds
-              ? `Welcome back.`
-              : `Music that echoes your taste.`}
-          </h1>
-          <div className="hero-actions">
-            {canInstall ? (
-              <button type="button" className="primary-action" onClick={install}>
-                <Download size={18} aria-hidden="true" />
-                <span>Install</span>
-              </button>
-            ) : null}
+      {!showQuickGrid && (
+        <section className="home-hero">
+          <div className="home-copy">
+            <p>Reverb</p>
+            <h1>{hasSeeds ? "Welcome back." : "Music that echoes your taste."}</h1>
             {hasSeeds && (
-              <button type="button" className="utility-button" onClick={() => recs.refetch()}>
-                <RefreshCw size={16} aria-hidden="true" />
-                <span>Refresh</span>
-              </button>
+              <div className="hero-actions">
+                <button type="button" className="utility-button" onClick={() => recs.refetch()}>
+                  <RefreshCw size={16} aria-hidden="true" />
+                  <span>Refresh</span>
+                </button>
+              </div>
             )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {showQuickGrid && (
+        <section className="spotify-quick-grid">
+          {history.slice(0, 8).map((track) => (
+            <div key={`quick-${track.id}`} className="spotify-quick-card">
+              <img src={track.artworkUrl} alt={track.title} />
+              <span>{track.title}</span>
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* Personalized "For You" sections */}
       {recs.isLoading && hasSeeds ? (
@@ -97,19 +99,7 @@ export default function Home() {
         </section>
       ))}
 
-      {/* Show "Recently played" if user has history */}
-      {history.length > 0 && (
-        <section className="section-block">
-          <header className="section-header">
-            <h2>Recently played</h2>
-          </header>
-          <div className="track-list">
-            {history.slice(0, 5).map((track) => (
-              <TrackRow key={track.id} track={track} compact />
-            ))}
-          </div>
-        </section>
-      )}
+
 
       {/* Charts as a fallback / always-present section */}
       <section className="section-block">

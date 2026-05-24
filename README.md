@@ -1,4 +1,4 @@
-# 🎵 Music App V3 — Developer Guide & Documentation
+# 🎵 Reverb — Developer Guide & Documentation
 
 A premium, Spotify-inspired music web application built with a visible YouTube player, direct audio previews, synchronized lyrics, a custom Web Audio API equalizer/visualizer, IndexedDB library persistence, and a progressive web app (PWA) shell.
 

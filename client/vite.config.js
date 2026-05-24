@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/icon.svg"],
       manifest: {
-        name: "Music App V3",
-        short_name: "Music V3",
-        description: "Visible YouTube playback, previews, lyrics, and offline library.",
+        name: "Reverb",
+        short_name: "Reverb",
+        description: "Music that echoes your taste.",
         theme_color: "#0b0f0d",
         background_color: "#080b0a",
         display: "standalone",
