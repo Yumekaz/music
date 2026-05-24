@@ -140,6 +140,55 @@ describe("playback controller", () => {
     expect(getState().volume).toBe(0.4);
   });
 
+  it("keeps next playing when the current track is playing", async () => {
+    const nextTrack = { ...track, id: "track-two", videoId: "video-two" };
+    const { controller, getState } = createTestController({
+      currentTrack: track,
+      isPlaying: true,
+      queue: [track, nextTrack]
+    });
+
+    await controller.next();
+
+    expect(getState()).toMatchObject({
+      currentTrack: nextTrack,
+      isPlaying: true
+    });
+  });
+
+  it("keeps next paused when the current track is paused", async () => {
+    const nextTrack = { ...track, id: "track-two", videoId: "video-two" };
+    const { controller, getState } = createTestController({
+      currentTrack: track,
+      isPlaying: false,
+      queue: [track, nextTrack]
+    });
+
+    await controller.next();
+
+    expect(getState()).toMatchObject({
+      currentTrack: nextTrack,
+      isPlaying: false
+    });
+  });
+
+  it("does not restart repeat-one playback when paused", async () => {
+    const { controller, getState } = createTestController({
+      currentTrack: track,
+      isPlaying: false,
+      repeat: "one",
+      positionMs: 4200
+    });
+
+    await controller.next();
+
+    expect(getState()).toMatchObject({
+      currentTrack: track,
+      positionMs: 0,
+      isPlaying: false
+    });
+  });
+
   it("skips one unavailable queued track and continues", async () => {
     const bad = { ...track, id: "bad", title: "Bad" };
     const good = { ...track, id: "good", title: "Good", videoId: "good-video" };

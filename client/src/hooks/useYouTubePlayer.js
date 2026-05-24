@@ -55,6 +55,17 @@ function createPlayerOptions(isPlaying, initialVideoId) {
   return opts;
 }
 
+function callPlayer(player, method, ...args) {
+  if (!player || typeof player[method] !== "function") return false;
+
+  try {
+    player[method](...args);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
   const containerARef = useRef(null);
   const containerBRef = useRef(null);
@@ -72,9 +83,75 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
   const seekTarget = usePlayerStore((state) => state.seekTarget);
   const volume = usePlayerStore((state) => state.volume);
   const pendingPauseRef = useRef(false);
+  const pendingStartRef = useRef(null);
+  const pendingStartTimeoutRef = useRef(null);
   const sponsorSegmentsRef = useRef([]);
 
   const activePlayer = activePlayerId === 'A' ? playerA : playerB;
+
+  function clearPendingStart(playerId, videoId) {
+    const pendingStart = pendingStartRef.current;
+    if (!pendingStart) return;
+    if (playerId && pendingStart.playerId !== playerId) return;
+    if (videoId && pendingStart.videoId !== videoId) return;
+
+    pendingStartRef.current = null;
+    if (pendingStartTimeoutRef.current) {
+      window.clearTimeout(pendingStartTimeoutRef.current);
+      pendingStartTimeoutRef.current = null;
+    }
+  }
+
+  function markPendingStart(playerId, videoId) {
+    pendingStartRef.current = { playerId, videoId };
+    pendingPauseRef.current = false;
+    usePlayerStore.getState().setBuffering(true);
+  }
+
+  function armPendingStartRetry(player, playerId, videoId) {
+    if (pendingStartTimeoutRef.current) {
+      window.clearTimeout(pendingStartTimeoutRef.current);
+      pendingStartTimeoutRef.current = null;
+    }
+
+    pendingStartTimeoutRef.current = window.setTimeout(() => {
+      const state = usePlayerStore.getState();
+      const stillCurrent =
+        state.isPlaying &&
+        state.sourceType === "youtube" &&
+        state.currentTrack?.videoId === videoId &&
+        pendingStartRef.current?.playerId === playerId &&
+        pendingStartRef.current?.videoId === videoId;
+
+      if (!stillCurrent || !player) return;
+
+      try {
+        const ytState = typeof player.getPlayerState === "function"
+          ? player.getPlayerState()
+          : null;
+        const YT = window.YT?.PlayerState || {};
+
+        if (ytState === YT.PLAYING) {
+          clearPendingStart(playerId, videoId);
+          usePlayerStore.getState().setBuffering(false);
+          return;
+        }
+      } catch {
+        // Fall through and ask the iframe to start again.
+      }
+
+      callPlayer(player, "playVideo");
+    }, 700);
+  }
+
+  function startPendingPlayer(player, playerId, videoId) {
+    markPendingStart(playerId, videoId);
+    armPendingStartRetry(player, playerId, videoId);
+
+    if (!callPlayer(player, "loadVideoById", videoId)) {
+      callPlayer(player, "playVideo");
+    }
+  }
 
   // 1. Initialize both players
   useEffect(() => {
@@ -98,7 +175,8 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
         const state = usePlayerStore.getState();
         const { isPlaying: storeIsPlaying, next, pause } = state;
         const YT = window.YT.PlayerState;
-        const eventVideoId = event.target === ytPlayerA
+        const eventPlayerId = event.target === ytPlayerA ? 'A' : 'B';
+        const eventVideoId = eventPlayerId === 'A'
           ? playerAVideoIdRef.current
           : playerBVideoIdRef.current;
         const currentVideoId = state.currentTrack?.videoId || "";
@@ -113,6 +191,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
         }
 
         if (event.data === YT.PLAYING) {
+          clearPendingStart(eventPlayerId, eventVideoId);
           usePlayerStore.getState().setBuffering(false);
           try {
             const qualities = event.target.getAvailableQualityLevels?.() || [];
@@ -164,11 +243,21 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
           if (pendingPauseRef.current || !storeIsPlaying) {
             pendingPauseRef.current = false;
-            setTimeout(() => event.target.pauseVideo(), 0);
+            setTimeout(() => callPlayer(event.target, "pauseVideo"), 0);
           }
         }
 
         if (event.data === YT.PAUSED) {
+          const pendingStart = pendingStartRef.current;
+          if (
+            storeIsPlaying &&
+            pendingStart?.playerId === eventPlayerId &&
+            pendingStart.videoId === eventVideoId
+          ) {
+            usePlayerStore.getState().setBuffering(true);
+            return;
+          }
+
           usePlayerStore.getState().setBuffering(false);
           pendingPauseRef.current = false;
 
@@ -184,6 +273,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
         }
 
         if (event.data === YT.ENDED) {
+          clearPendingStart(eventPlayerId, eventVideoId);
           usePlayerStore.getState().setBuffering(false);
           pendingPauseRef.current = false;
           next();
@@ -193,6 +283,11 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
       const onError = (event) => {
         const isFromActive = event.target === (activePlayerRef.current === 'A' ? ytPlayerA : ytPlayerB);
         if (!isFromActive) return;
+        const eventPlayerId = event.target === ytPlayerA ? 'A' : 'B';
+        const eventVideoId = eventPlayerId === 'A'
+          ? playerAVideoIdRef.current
+          : playerBVideoIdRef.current;
+        clearPendingStart(eventPlayerId, eventVideoId);
         usePlayerStore.getState().setBuffering(false);
         pendingPauseRef.current = false;
         usePlayerStore.getState().pause();
@@ -228,8 +323,9 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
     
     return () => {
       isMounted = false;
-      if (ytPlayerA?.destroy) ytPlayerA.destroy();
-      if (ytPlayerB?.destroy) ytPlayerB.destroy();
+      clearPendingStart();
+      callPlayer(ytPlayerA, "destroy");
+      callPlayer(ytPlayerB, "destroy");
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
@@ -246,7 +342,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
     const standbyVideoId = currentActiveId === 'A' ? playerBVideoIdRef.current : playerAVideoIdRef.current;
 
     if (!videoId) {
-      if (typeof currentActive.stopVideo === 'function') currentActive.stopVideo();
+      callPlayer(currentActive, "stopVideo");
       if (currentActiveId === 'A') playerAVideoIdRef.current = "";
       else playerBVideoIdRef.current = "";
       return;
@@ -265,10 +361,10 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
       // Mark the standby player active before stopping the old iframe so any
       // pause/stop event from the old video cannot flip the app back to paused.
-      if (typeof currentActive.stopVideo === 'function') currentActive.stopVideo();
+      callPlayer(currentActive, "stopVideo");
 
-      if (isPlaying && typeof currentStandby.playVideo === 'function') {
-        currentStandby.playVideo();
+      if (isPlaying) {
+        markPendingStart(newActiveId, videoId);
       }
       return;
     }
@@ -277,10 +373,10 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
     if (currentActiveId === 'A') playerAVideoIdRef.current = videoId;
     else playerBVideoIdRef.current = videoId;
 
-    if (isPlaying && typeof currentActive.loadVideoById === 'function') {
-      currentActive.loadVideoById(videoId);
-    } else if (typeof currentActive.cueVideoById === 'function') {
-      currentActive.cueVideoById(videoId);
+    if (isPlaying) {
+      startPendingPlayer(currentActive, currentActiveId, videoId);
+    } else {
+      callPlayer(currentActive, "cueVideoById", videoId);
     }
 
   // Intentionally omitting activePlayerId to avoid double-firing during a swap, but using refs for logic
@@ -295,15 +391,27 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
     const currentStandby = currentActiveId === 'A' ? playerB : playerA;
     const standbyVideoId = currentActiveId === 'A' ? playerBVideoIdRef.current : playerAVideoIdRef.current;
     
-    if (standbyVideoId !== nextVideoId && typeof currentStandby.cueVideoById === 'function') {
+    if (standbyVideoId !== nextVideoId) {
       if (currentActiveId === 'A') playerBVideoIdRef.current = nextVideoId;
       else playerAVideoIdRef.current = nextVideoId;
       
-      currentStandby.cueVideoById(nextVideoId);
+      callPlayer(currentStandby, "cueVideoById", nextVideoId);
     }
   }, [nextVideoId, playerA, playerB, activePlayerId]);
 
-  // 4. Handle Play/Pause
+  // 4. Start a selected standby player only after React promotes it to active.
+  useEffect(() => {
+    const pendingStart = pendingStartRef.current;
+    if (!pendingStart || !isPlaying || pendingStart.videoId !== videoId) return;
+    if (pendingStart.playerId !== activePlayerId) return;
+
+    const currentActive = activePlayerId === 'A' ? playerA : playerB;
+    if (!currentActive) return;
+
+    startPendingPlayer(currentActive, activePlayerId, videoId);
+  }, [activePlayerId, videoId, isPlaying, playerA, playerB]);
+
+  // 5. Handle Play/Pause
   useEffect(() => {
     const currentActive = activePlayerRef.current === 'A' ? playerA : playerB;
     const activeVideoId = activePlayerRef.current === 'A'
@@ -312,31 +420,38 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
     if (!currentActive || activeVideoId !== videoId) return;
 
-    if (typeof currentActive.playVideo === "function") {
-      if (isPlaying && videoId) {
-        pendingPauseRef.current = false;
-        currentActive.playVideo();
-      } else {
-        pendingPauseRef.current = true;
-        currentActive.pauseVideo();
+    if (isPlaying && videoId) {
+      const pendingStart = pendingStartRef.current;
+      if (
+        pendingStart?.videoId === videoId &&
+        pendingStart.playerId === activePlayerRef.current
+      ) {
+        return;
       }
+
+      pendingPauseRef.current = false;
+      callPlayer(currentActive, "playVideo");
+    } else {
+      pendingPauseRef.current = true;
+      callPlayer(currentActive, "pauseVideo");
     }
   }, [activePlayerId, playerA, playerB, isPlaying, videoId]);
 
-  // 5. Handle Seek
+  // 6. Handle Seek
   useEffect(() => {
-    if (activePlayer && seekTarget !== null && typeof activePlayer.seekTo === "function") {
-      activePlayer.seekTo(seekTarget / 1000, true);
+    if (activePlayer && seekTarget !== null) {
+      callPlayer(activePlayer, "seekTo", seekTarget / 1000, true);
       usePlayerStore.getState().setSeekTarget(null);
     }
   }, [activePlayer, seekTarget]);
 
-  // 6. Time Polling & SponsorBlock
+  // 7. Time Polling & SponsorBlock
   useEffect(() => {
     if (!activePlayer || !isPlaying || !videoId) return;
     
     const interval = setInterval(() => {
-      if (typeof activePlayer.getCurrentTime === "function") {
+      try {
+        if (typeof activePlayer.getCurrentTime !== "function") return;
         const timeSec = activePlayer.getCurrentTime();
         const timeMs = timeSec * 1000;
         const durMs = activePlayer.getDuration() * 1000;
@@ -353,13 +468,15 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
 
         if (timeMs > 0) usePlayerStore.getState().setPosition(timeMs);
         if (durMs > 0) usePlayerStore.getState().setDuration(durMs);
+      } catch {
+        // The YouTube iframe can briefly disappear during mobile tab lifecycle changes.
       }
     }, 500);
     
     return () => clearInterval(interval);
   }, [activePlayer, isPlaying, videoId]);
 
-  // 7. Fetch SponsorBlock
+  // 8. Fetch SponsorBlock
   useEffect(() => {
     if (!videoId) {
       sponsorSegmentsRef.current = [];
@@ -384,28 +501,22 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
     return () => { isMounted = false; };
   }, [videoId]);
 
-  // 8. Quality Settings
+  // 9. Quality Settings
   const playbackQuality = useSettingsStore((state) => state.playbackQuality);
   useEffect(() => {
-    if (activePlayer && typeof activePlayer.setPlaybackQuality === "function") {
-      activePlayer.setPlaybackQuality(playbackQuality);
-    }
+    callPlayer(activePlayer, "setPlaybackQuality", playbackQuality);
   }, [activePlayer, playbackQuality]);
 
-  // 9. Volume Synchronization
+  // 10. Volume Synchronization
   useEffect(() => {
-    if (playerA && typeof playerA.setVolume === "function") {
-      playerA.setVolume(volume * 100);
-    }
+    callPlayer(playerA, "setVolume", volume * 100);
   }, [playerA, volume]);
 
   useEffect(() => {
-    if (playerB && typeof playerB.setVolume === "function") {
-      playerB.setVolume(volume * 100);
-    }
+    callPlayer(playerB, "setVolume", volume * 100);
   }, [playerB, volume]);
 
-  // 10. Visibility change recovery — resume YouTube after Chrome unfreezes tab
+  // 11. Visibility change recovery — resume YouTube after Chrome unfreezes tab
   useEffect(() => {
     function handleVisibilityResume() {
       if (document.visibilityState !== "visible") return;
@@ -421,7 +532,7 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
         // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
         if (ytState === 2 || ytState === -1 || ytState === 5) {
           // YouTube was paused/frozen by Chrome — resume it
-          currentActive.playVideo();
+          callPlayer(currentActive, "playVideo");
         }
       } catch {
         // Player might be destroyed or in a bad state after freeze

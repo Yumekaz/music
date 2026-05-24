@@ -131,7 +131,8 @@ export function createPlaybackController({ get, set }) {
     return track;
   }
 
-  async function playTrack(track, sourceType = "youtube") {
+  async function playTrack(track, sourceType = "youtube", options = {}) {
+    const playIntent = options.playIntent ?? true;
     const { volume } = get();
     const backgroundResult = resolveChromeBackgroundAudioIfNeeded(track, sourceType, volume);
     const trackToPlay = backgroundResult && typeof backgroundResult.then === "function"
@@ -145,7 +146,7 @@ export function createPlaybackController({ get, set }) {
       resolvedSourceType === "youtube" &&
       !hasChromeBackgroundAudioSource(trackToPlay);
     const documentHidden = isDocumentHidden();
-    const shouldPlay = Boolean(trackToPlay) && !(chromeForegroundOnly && documentHidden);
+    const shouldPlay = Boolean(trackToPlay) && playIntent && !(chromeForegroundOnly && documentHidden);
 
     syncAudioStateSync(trackToPlay, resolvedSourceType, shouldPlay, volume);
 
@@ -196,7 +197,8 @@ export function createPlaybackController({ get, set }) {
     updateAudioState(get);
   }
 
-  async function autoPlay() {
+  async function autoPlay(options = {}) {
+    const playIntent = options.playIntent ?? true;
     const { currentTrack } = get();
     if (!currentTrack) return;
 
@@ -212,7 +214,7 @@ export function createPlaybackController({ get, set }) {
       if (!candidates.length) return;
 
       const pick = candidates[Math.floor(Math.random() * candidates.length)];
-      await playTrack(pick, "youtube");
+      await playTrack(pick, "youtube", { playIntent });
     } catch {
       set({
         playbackFailure: playbackFailure("Could not fetch recommendations", {
@@ -224,10 +226,11 @@ export function createPlaybackController({ get, set }) {
 
   async function next() {
     const state = get();
+    const playIntent = state.isPlaying;
 
     if (state.repeat === "one") {
       seek(0);
-      set({ isPlaying: true });
+      set({ isPlaying: Boolean(state.currentTrack) && playIntent });
       resetDirectAudioToStart();
       updateAudioState(get);
       return;
@@ -235,7 +238,7 @@ export function createPlaybackController({ get, set }) {
 
     const candidates = getNextQueueCandidates(state);
     if (!candidates.length) {
-      await autoPlay();
+      await autoPlay({ playIntent });
       return;
     }
 
@@ -250,15 +253,16 @@ export function createPlaybackController({ get, set }) {
         continue;
       }
 
-      await playTrack(candidate, "youtube");
+      await playTrack(candidate, "youtube", { playIntent });
       return;
     }
 
-    await autoPlay();
+    await autoPlay({ playIntent });
   }
 
   async function previous() {
     const state = get();
+    const playIntent = state.isPlaying;
 
     if (state.positionMs > 3000) {
       seek(0);
@@ -268,8 +272,9 @@ export function createPlaybackController({ get, set }) {
 
     if (!state.queue.length) return;
     const index = queueIndexForState(state);
-    const previousTrack = state.queue[(index - 1 + state.queue.length) % state.queue.length];
-    await playTrack(previousTrack, "youtube");
+    const safeIndex = index >= 0 ? index : 0;
+    const previousTrack = state.queue[(safeIndex - 1 + state.queue.length) % state.queue.length];
+    await playTrack(previousTrack, "youtube", { playIntent });
   }
 
   return {
