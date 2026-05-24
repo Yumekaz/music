@@ -115,31 +115,11 @@ export function TrackMenu({ track }) {
     setOpen(false);
   }
 
-  const wrapperClass = "relative";
-  const buttonClass = "w-[32px] h-[32px] inline-flex items-center justify-center rounded-full border-0 bg-transparent text-muted cursor-pointer transition-colors hover:text-ink hover:bg-[rgba(255,255,255,0.07)] md:opacity-0 group-hover:opacity-100 focus:opacity-100 active:scale-95";
-  const menuClass = "absolute right-0 bottom-[calc(100%+8px)] min-w-[200px] bg-[#282e28] border border-[#333] rounded-[8px] py-[4px] z-[1000] shadow-[0_12px_32px_rgba(0,0,0,0.6)] animate-menu-in";
-
-  const getItemClass = (isHighlight = false, isMuted = false) => {
-    let base = "flex items-center gap-[12px] w-full px-[16px] py-[10px] border-0 bg-transparent text-[0.85rem] cursor-pointer text-left";
-    if (isHighlight) {
-      base += " text-accent font-semibold hover:bg-[rgba(30,215,96,0.13)]";
-    } else if (isMuted) {
-      base += " text-muted cursor-default";
-    } else {
-      base += " text-ink hover:bg-[rgba(30,215,96,0.13)]";
-    }
-    return base;
-  };
-
-  const dividerClass = "h-[1px] bg-line my-[4px]";
-  const subMenuClass = "border-t border-[#333] pt-[4px]";
-  const arrowClass = "ml-auto text-[1.1rem] text-muted";
-
   return (
-    <div className={wrapperClass} ref={menuRef}>
+    <div className="track-menu-wrapper" ref={menuRef}>
       <button
         type="button"
-        className={buttonClass}
+        className="icon-button icon-button--small"
         onClick={() => { setOpen(!open); setShowPlaylists(false); }}
         aria-label="More options"
       >
@@ -147,32 +127,32 @@ export function TrackMenu({ track }) {
       </button>
 
       {open && (
-        <div className={menuClass}>
-          <button type="button" className={getItemClass(true)} onClick={handlePlayNext}>
+        <div className="track-menu">
+          <button type="button" className="track-menu-item track-menu-item--highlight" onClick={handlePlayNext}>
             <Play size={16} />
             <span>Play next</span>
           </button>
 
-          <button type="button" className={getItemClass()} onClick={handleAddToQueue}>
+          <button type="button" className="track-menu-item" onClick={handleAddToQueue}>
             <ListMusic size={16} />
             <span>Add to queue</span>
           </button>
 
-          <div className={dividerClass} />
+          <div className="track-menu-divider" />
 
           <button
             type="button"
-            className={getItemClass()}
+            className="track-menu-item"
             onClick={() => setShowPlaylists(!showPlaylists)}
           >
             <ListPlus size={16} />
             <span>Add to playlist</span>
-            <span className={arrowClass}>›</span>
+            <span className="track-menu-arrow">›</span>
           </button>
 
           {showPlaylists && (
-            <div className={subMenuClass}>
-              <button type="button" className={getItemClass()} onClick={handleCreatePlaylist}>
+            <div className="track-menu-sub">
+              <button type="button" className="track-menu-item" onClick={handleCreatePlaylist}>
                 <Plus size={16} />
                 <span>Create playlist</span>
               </button>
@@ -180,18 +160,18 @@ export function TrackMenu({ track }) {
                 <button
                   key={pl.id}
                   type="button"
-                  className={getItemClass()}
+                  className="track-menu-item"
                   onClick={() => handleAddToPlaylist(pl)}
                 >
                   <span>{pl.name}</span>
                 </button>
               )) : (
-                <div className={getItemClass(false, true)}>No playlists yet</div>
+                <div className="track-menu-item muted">No playlists yet</div>
               )}
             </div>
           )}
 
-          <button type="button" className={getItemClass()} onClick={handleLike}>
+          <button type="button" className="track-menu-item" onClick={handleLike}>
             <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
             <span>{isLiked ? "Remove from Liked" : "Like"}</span>
           </button>
@@ -199,7 +179,7 @@ export function TrackMenu({ track }) {
           {(track.jamendoUrl || track.previewUrl) && (
             <button
               type="button"
-              className={getItemClass()}
+              className="track-menu-item"
               onClick={handleDownloadToggle}
               disabled={downloading}
             >
@@ -208,15 +188,15 @@ export function TrackMenu({ track }) {
             </button>
           )}
 
-          <div className={dividerClass} />
+          <div className="track-menu-divider" />
 
-          <button type="button" className={getItemClass()} onClick={handleGoToArtist}>
+          <button type="button" className="track-menu-item" onClick={handleGoToArtist}>
             <User size={16} />
             <span>Go to artist</span>
           </button>
 
           {(track.albumId || track.albumName) && (
-            <button type="button" className={getItemClass()} onClick={handleGoToAlbum}>
+            <button type="button" className="track-menu-item" onClick={handleGoToAlbum}>
               <Disc3 size={16} />
               <span>Go to album</span>
             </button>

@@ -46,46 +46,37 @@ export default function Search() {
   }, [query]);
 
   const search = useSearch(query);
-  const charts = useQuery({
-    queryKey: ["charts"],
+  const charts = useQuery({ 
+    queryKey: ["charts"], 
     queryFn: getCharts,
-    enabled: !query
+    enabled: !query 
   });
 
   function handleSelectRecent(recentQuery) {
     setInput(recentQuery);
   }
 
-  const pageStackClass = "grid gap-[28px] md:flex md:flex-col md:gap-[32px] md:max-w-[1920px] md:mx-auto";
-  const searchHeadingClass = "grid gap-[16px] sticky top-0 bg-[#080b0a] pt-[16px] pb-[8px] z-20 shadow-[0_4px_24px_rgba(8,11,10,0.8)]";
-  const searchLandingClass = "flex flex-col gap-[32px]";
-  const sectionBlockClass = "grid gap-[16px]";
-  const sectionHeaderClass = "flex items-center justify-between gap-[16px] min-h-[36px] flex-wrap";
-  const browseGridClass = "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[16px]";
-  const browseCardClass = "relative aspect-[1.5] border-0 rounded-[12px] p-[16px] text-white text-[1.1rem] font-bold text-left cursor-pointer overflow-hidden transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:-translate-y-[4px] hover:scale-[1.02] hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)] before:content-[''] before:absolute before:inset-0 before:bg-[linear-gradient(135deg,rgba(255,255,255,0.15)_0%,transparent_50%)] before:z-[1] before:pointer-events-none";
-  const trackListClass = "grid gap-[8px]";
-
   return (
-    <div className={pageStackClass}>
-      <section className={searchHeadingClass}>
-        <h1 className="m-0 mb-[16px] text-[clamp(2.2rem,6vw,5.6rem)] leading-[0.96] tracking-normal font-bold">Search</h1>
+    <div className="page-stack">
+      <section className="search-heading">
+        <h1>Search</h1>
         <SearchBar value={input} onChange={setInput} />
       </section>
-
+      
       {!query ? (
-        <div className={searchLandingClass}>
+        <div className="search-landing-container">
           <RecentSearches onSelect={handleSelectRecent} />
-
-          <section className={sectionBlockClass}>
-            <header className={sectionHeaderClass}>
-              <h2 className="m-0 text-[1.2rem] font-bold">Browse All</h2>
+          
+          <section className="section-block">
+            <header className="section-header">
+              <h2>Browse All</h2>
             </header>
-            <div className={browseGridClass}>
+            <div className="browse-grid">
               {BROWSE_CATEGORIES.map((cat) => (
                 <button
                   key={cat.name}
                   type="button"
-                  className={browseCardClass}
+                  className="browse-card"
                   style={{ background: cat.gradient }}
                   onClick={() => {
                     setInput(cat.query);
@@ -94,20 +85,20 @@ export default function Search() {
                     window.dispatchEvent(new Event("storage"));
                   }}
                 >
-                  <span className="relative z-[2] drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]">{cat.name}</span>
+                  <span>{cat.name}</span>
                 </button>
               ))}
             </div>
           </section>
 
-          <section className={sectionBlockClass}>
-            <header className={sectionHeaderClass}>
-              <h2 className="m-0 text-[1.2rem] font-bold">Global Charts</h2>
+          <section className="section-block">
+            <header className="section-header">
+              <h2>Global Charts</h2>
             </header>
             {charts.isLoading ? (
               <LoadingSkeleton label="Loading charts" />
             ) : (
-              <div className={trackListClass}>
+              <div className="track-list">
                 {charts.data?.tracks?.slice(0, 6).map((track) => (
                   <TrackRow key={track.id} track={track} compact />
                 ))}

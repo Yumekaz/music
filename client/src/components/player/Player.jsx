@@ -95,6 +95,7 @@ export function Player({ online }) {
   }
 
   const handleBarClick = (e) => {
+    // Only navigate to Now Playing on mobile viewports when clicking non-interactive areas
     if (window.innerWidth <= 768 && currentTrack) {
       navigate("/now-playing");
     }
@@ -108,52 +109,74 @@ export function Player({ online }) {
       : playbackFailure?.message || "";
   const statusMessage = !online ? "Connect to internet to play" : readinessMessage || failureMessage;
 
-  const playerBarClass = "fixed bottom-[calc(58px+env(safe-area-inset-bottom,8px)+8px)] left-[8px] right-[8px] w-[calc(100%-16px)] h-[64px] min-h-[64px] rounded-[12px] bg-[rgba(12,16,15,0.9)] backdrop-blur-[24px] border border-[rgba(255,255,255,0.08)] shadow-[0_8px_32px_rgba(0,0,0,0.5)] grid grid-cols-[44px_minmax(0,1fr)_auto] grid-rows-auto [grid-template-areas:'art_meta_controls'] px-[14px] pl-[10px] gap-[12px] z-30 md:bottom-0 md:left-[280px] md:right-0 md:w-auto md:h-auto md:min-h-[112px] md:rounded-none md:bg-[rgba(8,11,10,0.95)] md:backdrop-blur-[18px] md:border-t md:border-x-0 md:border-b-0 md:border-line md:shadow-none md:grid-cols-[92px_minmax(140px,280px)_1fr_minmax(180px,auto)] md:[grid-template-areas:none] md:py-[10px] md:px-[18px] md:gap-[20px] md:items-center";
-  const playerMediaClass = "w-[44px] h-[44px] min-w-[44px] rounded-[6px] md:w-[92px] md:h-[92px] md:min-w-[92px] md:rounded-[8px] [grid-area:art] md:[grid-area:auto] cursor-pointer overflow-hidden";
-  const mediaContentClass = "w-full h-full object-cover";
-  const playerMetaClass = "min-w-0 flex flex-col justify-center gap-[1px] md:gap-[4px] [grid-area:meta] md:[grid-area:auto]";
-  const playerMetaRowClass = "flex items-center gap-[8px] md:gap-[16px] min-w-0";
-  const playerTitleClass = "text-[0.9rem] md:text-[1.15rem] font-bold truncate text-left border-0 bg-transparent p-0 text-ink cursor-pointer hover:underline";
-  const heartClass = `hidden sm:inline-grid w-[28px] h-[28px] md:w-[32px] md:h-[32px] place-items-center rounded-full border-0 bg-transparent text-muted cursor-pointer transition-colors hover:text-ink hover:bg-[rgba(255,255,255,0.07)] ${isLiked ? "text-accent" : ""}`;
-  const playerWorkspaceClass = "hidden md:flex flex-col items-center gap-[12px] flex-1 min-w-[300px] max-w-[800px]";
-  const playerToolsClass = "hidden md:flex items-center gap-[16px] justify-end min-w-[180px]";
-
   return (
     <>
-      <footer className={playerBarClass} aria-label="Persistent player" onClick={handleBarClick}>
-        <div className={playerMediaClass} onClick={() => currentTrack && navigate("/now-playing")} role="button" tabIndex={0}>
+      <footer
+        className="player-bar"
+        aria-label="Persistent player"
+        onClick={handleBarClick}
+      >
+        <div className="player-media" onClick={() => currentTrack && navigate("/now-playing")} role="button" tabIndex={0}>
           {currentTrack && sourceType === "youtube" ? (
-            <YouTubeEmbed track={currentTrack} nextVideoId={getNextTrack()?.videoId} isPlaying={online && isPlaying} className={mediaContentClass} />
+            <YouTubeEmbed
+              track={currentTrack}
+              nextVideoId={getNextTrack()?.videoId}
+              isPlaying={online && isPlaying}
+              className="mini-youtube"
+            />
           ) : currentTrack ? (
-            <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className={mediaContentClass} />
+            <ImageWithFallback src={currentTrack.artworkUrl} alt={currentTrack.title} className="mini-artwork" />
           ) : (
-            <div className={`grid place-items-center bg-[#181e18] text-muted ${mediaContentClass}`}>
+            <div className="mini-empty">
               <Disc3 size={28} aria-hidden="true" />
             </div>
           )}
         </div>
-        <div className={playerMetaClass}>
-          <div className={playerMetaRowClass}>
-            <button type="button" className={playerTitleClass} onClick={() => currentTrack && navigate("/now-playing")}>
+        <div className="player-meta">
+          <div className="player-meta-row">
+            <button type="button" className="player-title" onClick={() => currentTrack && navigate("/now-playing")}>
               {currentTrack?.title || "Choose a track"}
             </button>
-            <button type="button" className={heartClass} onClick={(e) => { e.stopPropagation(); handleLike(); }} aria-label={isLiked ? "Unlike" : "Like"}>
+            <button
+              type="button"
+              className={`icon-button icon-button--small player-heart ${isLiked ? "liked" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLike();
+              }}
+              aria-label={isLiked ? "Unlike" : "Like"}
+            >
               <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
             </button>
           </div>
-          <span className="text-muted text-[0.8rem] md:text-[0.85rem] truncate">{currentTrack?.artistName || "Search or play from Home"}</span>
-          {statusMessage ? <strong className="text-[#ff7777] font-semibold text-[0.7rem] md:text-[0.75rem] truncate">{statusMessage}</strong> : null}
+          <span>{currentTrack?.artistName || "Search or play from Home"}</span>
+          {statusMessage ? <strong>{statusMessage}</strong> : null}
         </div>
-        <div className={playerWorkspaceClass}>
-          <PlayerControls disabled={disabled} isPlaying={online && isPlaying} onToggle={handleToggle} onNext={next} onPrevious={previous} />
-          <ProgressBar positionMs={positionMs} durationMs={durationMs || currentTrack?.durationMs || 0} onSeek={seek} />
+        <div className="player-workspace">
+          <PlayerControls
+            disabled={disabled}
+            isPlaying={online && isPlaying}
+            onToggle={handleToggle}
+            onNext={next}
+            onPrevious={previous}
+          />
+          <ProgressBar
+            positionMs={positionMs}
+            durationMs={durationMs || currentTrack?.durationMs || 0}
+            onSeek={seek}
+          />
         </div>
-        <div className="flex md:hidden [grid-area:controls] items-center gap-[12px] pr-[4px]">
-          <PlayerControls compact disabled={disabled} isPlaying={online && isPlaying} onToggle={handleToggle} onNext={next} onPrevious={previous} />
-        </div>
-        <div className={playerToolsClass}>
+        <div className="player-tools">
           <VolumeControl volume={volume} onVolume={setVolume} />
-          <button type="button" className={`w-[32px] h-[32px] inline-grid place-items-center rounded-full border-0 bg-transparent text-muted cursor-pointer transition-colors hover:text-ink hover:bg-[rgba(255,255,255,0.07)] ${queueOpen ? "text-ink bg-[rgba(255,255,255,0.07)]" : ""}`} onClick={(e) => { e.stopPropagation(); setQueueOpen(!queueOpen); }} aria-label="Toggle queue">
+          <button
+            type="button"
+            className={`icon-button icon-button--small ${queueOpen ? "active" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setQueueOpen(!queueOpen);
+            }}
+            aria-label="Toggle queue"
+          >
             <ListMusic size={18} />
           </button>
         </div>
