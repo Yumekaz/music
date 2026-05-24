@@ -135,4 +135,20 @@ describe("useYouTubePlayer", () => {
     expect(usePlayerStore.getState().isPlaying).toBe(true);
     expect(players[1].pauseCalls).toBe(0);
   });
+
+  it("ignores stale pause events from the previous iframe after a manual skip", async () => {
+    render(<YouTubeHarness videoId="video-one" nextVideoId="video-two" isPlaying />);
+
+    await waitFor(() => expect(players).toHaveLength(2));
+
+    act(() => {
+      usePlayerStore.setState({
+        currentTrack: { id: "track-two", videoId: "video-two" },
+        isPlaying: true
+      });
+      players[0].emit(window.YT.PlayerState.PAUSED);
+    });
+
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+  });
 });

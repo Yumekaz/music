@@ -95,8 +95,17 @@ export function useYouTubePlayer({ videoId, nextVideoId, isPlaying }) {
         const isFromActive = event.target === (activePlayerRef.current === 'A' ? ytPlayerA : ytPlayerB);
         if (!isFromActive) return;
 
-        const { isPlaying: storeIsPlaying, next, pause } = usePlayerStore.getState();
+        const state = usePlayerStore.getState();
+        const { isPlaying: storeIsPlaying, next, pause } = state;
         const YT = window.YT.PlayerState;
+        const eventVideoId = event.target === ytPlayerA
+          ? playerAVideoIdRef.current
+          : playerBVideoIdRef.current;
+        const currentVideoId = state.currentTrack?.videoId || "";
+
+        if (currentVideoId && eventVideoId && eventVideoId !== currentVideoId) {
+          return;
+        }
 
         if (event.data === YT.BUFFERING) {
           usePlayerStore.getState().setBuffering(true);
